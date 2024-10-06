@@ -5,13 +5,14 @@ int main() {
     TemperatureAnalysis analysis;
 
     // Initialize the file
-    if (!analysis.initializeFile("temperature_data.txt")) {
+    if (!analysis.initializeFile("biw12.log")) {
         std::cerr << "Error: Could not open file" << std::endl;
         return 1;
     }
 
     // Process the temperature data
     analysis.processTemperatureData();
+    analysis.generateReport("outputData.log");
 
     return 0;
 }
