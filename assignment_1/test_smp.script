@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH --job-name=test  # name of the job you’re running
+#SBATCH --nodes=1 # number of nodes requested
+#SBATCH --ntasks-per-node=28
+#SBATCH --cluster=smp # mpi, gpu and smp are available in H2P
+#SBATCH --partition=smp # available: smp, high-mem, opa, gtx1080, titanx, k40
+#SBATCH --mail-user =aag88@pitt.edu # send email to this address if ...
+#SBATCH --mail-type=END,FAIL # ... job ends or fails
+#SBATCH --time=10:00 # walltime in dd-hh:mm format
+#SBATCH --qos=normal # enter long if walltime is greater than 3 days
+#SBATCH --output=test_smp.out # the file that contains output
+#SBATCH --account=ece1115_2024f   # your class account
+
+module purge #make sure the modules environment is sane
+module load intel/2017.1.132 intel-mpi/2017.1.132 fhiaims/160328_3
+
+# If you have any files that you want to run, include to the job script using cp
+cp test.cpp $SLURM_SCRATCH # Copy inputs to scratch
+cd $SLURM_SCRATCH #change directory
+
+# Set a trap to copy any temp files you may need
+run_on_exit(){
+cp -r $SLURM_SCRATCH/* $SLURM_SUBMIT_DIR
+}
+trap run_on_exit EXIT
+
+g++ test.cpp -lpthread -o main.o #compile the program, set the runnable filename
+
+./main.o # Run the runnable

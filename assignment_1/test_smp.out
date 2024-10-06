@@ -1,0 +1,14 @@
+test.cpp: In function ‘int main()’:
+test.cpp:18:60: warning: cast to pointer from integer of different size [-Wint-to-pointer-cast]
+ rc = pthread_create(&threads[i], NULL, PrintHello, (void *)i);
+                                                            ^
+main() : creating thread, 0
+main() : creating thread, 1
+Hello World! Thread ID, main() : creating thread, 2
+0
+main() : creating thread, 3
+Hello World! Thread ID, Hello World! Thread ID, 2
+1
+main() : creating thread, 4
+Hello World! Thread ID, 3
+Hello World! Thread ID, 4
