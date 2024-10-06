@@ -68,7 +68,7 @@ private:
     double calculateMean(const vector<double> &temps);
     double calculateStdDev(const vector<double> &temps, double mean);
     ifstream inputFile;
-    std::map<std::string, HourlyData> hourlyData;
+    map<int, vector<double>> dataset;
 };
 
 #endif // TEMPERATURE_ANALYSIS_H
