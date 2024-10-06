@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --job-name=mpitest                # Job name
+#SBATCH --nodes=2                         # Number of nodes
+#SBATCH --ntasks-per-node=28              # Tasks per node
+#SBATCH --cluster=mpi                     # Use the MPI cluster
+#SBATCH --time=10:00                      # Walltime in dd-hh:mm format
+#SBATCH --qos=normal                      # Quality of service
+#SBATCH --output=mpi_output.log           # Output file name
+#SBATCH --account=ece1115_2024f           # Your account
+
+module purge                               # Purge all loaded modules
+module load intel/2017.1.132 intel-mpi/2017.1.132  # Load required modules
+
+# Copy your source code to the scratch directory
+cp main.cpp $SLURM_SCRATCH                # Change to main.cpp
+
+# Compile the MPI program
+mpicxx $SLURM_SCRATCH/main.cpp -std=c++11 -o main.o  # Compile the code
+
+# Execute the MPI program
+mpirun -np $SLURM_NTASKS ./main.o         # Run the executable
