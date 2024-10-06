@@ -21,14 +21,15 @@ bool TemperatureAnalysis::initializeFile(const string& filename) {
  * Data is parsed and bucketed based on hours.
  */
 void TemperatureAnalysis::processTemperatureData(void) {
-    string line;
+    string line = "";
     while(getline(inputFile, line)){
         // read in a line and parse it, storing it temporarily to "data"
         TemperatureData data = parseLine(line);
-        // convert time and date to group into an hourly bucket
-        string hourTimeStamp = data.date + " " + data.time.substr(0, 2) + ":00:00";
+        if (data.hour == INT_MAX) {
+            continue;
+        }
         // check if the bucket has been created, if not, initialize it
-        if (hourlyData.find(hourTimeStamp) == hourlyData.end()) {
+        if (hourlyData.find(data.hour) == hourlyData.end()) {
             hourlyData[hourTimeStamp] = HourlyData();
         }
         // determine previous temperature within bucket
@@ -102,18 +103,33 @@ void TemperatureAnalysis::generateReport(const std::string& reportName) {
 }
 
 int TemperatureAnalysis::getMonthFromTimeStamp(const string &timestamp) {
-    string monthStr = timestamp.substr(5,2);
+    string monthStr = timestamp.substr(0,2);
+    printf("%s\n",monthStr);
     return stoi(monthStr);
 }
 
 // Parses a line of temperature data
 TemperatureData TemperatureAnalysis::parseLine(const std::string& line) {
-    stringstream stream(line);
-    string date;
-    string time;
-    double temp;
-    stream >> date >> time >> temp;
-    return TemperatureData(date, time, temp);
+    stringstream ss(line);
+    char delim{};
+
+    int month, day, year, hour, minute, second;
+    float temperature;
+
+
+    if (line.empty()) {
+        return TemperatureData(INT_MAX,0,0,0,0,0,0.0);  // Return an empty object for an empty line
+    }
+
+    // store date into temporary fields
+    ss >> month >> delim >> day >> delim >> year; 
+    // store time into temporary fields
+    ss >> hour >> delim >> minute >> delim >> second;
+    // store temperature
+    ss >> temperature >> delim;
+
+    printf("Date = %d/%d/%d\t Time = %d:%d:%d\t Temp = %f\n", month, day, year, hour, minute, second, temperature);
+    return TemperatureData(month, day, year, hour, minute, second, temperature);
 }
 
 // Determine if new data point is an anomaly (more than two degrees away from the previous temperature)
