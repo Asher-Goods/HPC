@@ -57,7 +57,7 @@ public:
     // Public function to generate report with standard deviation and mean information for each month
     void generateReport(const std::string &reportName);
 
-    TemperatureData parseLine(const string &line);
+    
 
 private:
     // Private helper methods
@@ -65,6 +65,7 @@ private:
     bool isAnomaly(double currentTemp, double previousTemp);
     string getHourlyTimestamp(const string &date, const string &time);
     int getMonthFromTimeStamp(const string &timestamp);
+    TemperatureData parseLine(const string &line);
     double calculateMean(const vector<double> &temps);
     double calculateStdDev(const vector<double> &temps, double mean);
     ifstream inputFile;

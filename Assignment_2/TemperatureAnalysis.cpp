@@ -22,41 +22,47 @@ bool TemperatureAnalysis::initializeFile(const string& filename) {
  */
 void TemperatureAnalysis::processTemperatureData(void) {
     string line = "";
-    int current_hour = 0;
+    int current_hour = -1;
     double count = 0;
     double sum = 0;
-    while(getline(inputFile, line)){
-        // read in a line and parse it, storing it temporarily to "data"
+    int last_month = -1; // Variable to store the last month processed
+
+    while (getline(inputFile, line)) {
         TemperatureData data = parseLine(line);
-        if (data.hour == INT_MAX) {
+        if (data.hour == INT_MAX) {  // Skip invalid data lines
             continue;
         }
 
-        if (current_hour != data.hour && !dataset[data.month].empty()) {
-            printf("is this ever executed?\n");
-            dataset[data.month].push_back(sum/count);    
+        // Insert the average temperature for the last hour if moving to a new hour
+        if (current_hour != data.hour) {
+            if (current_hour != -1 && count > 0 && last_month != -1) {
+                dataset[last_month].push_back(sum / count);
+            }
             current_hour = data.hour;
             count = 0;
             sum = 0;
         }
 
-        // determine previous temperature within bucket
-        double previousTemp;
-        if (count > 0) {
-            previousTemp = sum / count;
-        } else {
-            previousTemp = data.temperature;
-        }
-        // check for existence of other items in the bucket and anomalies
-        if (count > 0 && isAnomaly(data.temperature, previousTemp)) {
-            continue; // return to the top of the while loop and parse a new line
-        } 
+        // Update the last month processed
+        last_month = data.month;
 
-        // update sum and count for hourly bucket
+        // Check for anomalies
+        double previousTemp = (count > 0) ? (sum / count) : data.temperature;
+        if (count > 0 && isAnomaly(data.temperature, previousTemp)) {
+            continue;
+        }
+
+        // Accumulate temperature
         sum += data.temperature;
         count++;
     }
+
+    // Handle the last hour in the file
+    if (count > 0 && last_month != -1) {
+        dataset[last_month].push_back(sum / count);
+    }
 }
+
 
 void TemperatureAnalysis::generateReport(const std::string& reportName) {
     std::ofstream reportFile(reportName);
@@ -65,8 +71,8 @@ void TemperatureAnalysis::generateReport(const std::string& reportName) {
         return;
     }
 
-    for (int month = 1; month <= 12; ++month) {  // Assuming `dataset` has 12 inner vectors, one for each month
-        if (dataset[month].empty()) {
+    for (int month = 1; month <= 12; ++month) {
+        if (dataset[month].empty()) {  // Check if there is data for this month
             reportFile << "Month: " << month << " - No data available\n";
             continue;
         }
@@ -86,13 +92,8 @@ void TemperatureAnalysis::generateReport(const std::string& reportName) {
         double stddev = std::sqrt(varianceSum / dataset[month].size());
 
         // Write report for this month
-        reportFile << "Month: " << month + 1 << " | Mean Temperature: " << mean
-                   << " | Standard Deviation: " << stddev;
-        if (stddev > 1) {
-            reportFile << " FAIL\n";
-        } else {
-            reportFile << " pass\n";
-        }
+        reportFile << "Month: " << month << " | Mean Temperature: " << mean
+                   << " | Standard Deviation: " << stddev << endl;
     }
 
     reportFile.close();

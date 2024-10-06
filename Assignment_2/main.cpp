@@ -7,7 +7,7 @@ int main() {
     printf("STEP 1: Initialize File\n");
 
     // Initialize the file
-    if (!analysis.initializeFile("bigw12a.log")) {
+    if (!analysis.initializeFile("bigw12.log")) {
         std::cerr << "Error: Could not open file" << std::endl;
         return 1;
     }
