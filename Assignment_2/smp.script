@@ -1,0 +1,41 @@
+#!/bin/bash
+#SBATCH --job-name=test             # Name of the job you're running
+#SBATCH --nodes=1                    # Number of nodes requested
+#SBATCH --ntasks-per-node=28         # Number of tasks per node
+#SBATCH --cluster=smp                # Cluster type: smp
+#SBATCH --partition=smp              # Partition type: smp
+#SBATCH --mail-user=aag88@pitt.edu   # Send email to this address
+#SBATCH --mail-type=END,FAIL         # Notify when job ends or fails
+#SBATCH --time=10:00                 # Walltime in dd-hh:mm format
+#SBATCH --qos=normal                 # Quality of Service
+#SBATCH --output=smp_output.log        # Output file
+#SBATCH --account=ece1115_2024f      # Your class account
+
+module purge                          # Ensure the modules environment is sane
+module load intel/2017.1.132 intel-mpi/2017.1.132 fhiaims/160328_3
+
+# Copy inputs to scratch space
+cp TemperatureAnalysis.cpp $SLURM_SCRATCH
+cp TemperatureAnalysis.h $SLURM_SCRATCH
+cp main.cpp $SLURM_SCRATCH           # Adjusted filename for consistency
+
+cd $SLURM_SCRATCH                     # Change directory to scratch space
+
+# Set a trap to copy any temp files you may need
+run_on_exit() {
+    cp -r $SLURM_SCRATCH/* $SLURM_SUBMIT_DIR
+}
+trap run_on_exit EXIT
+
+# Compile the program with pthreads
+g++ TemperatureAnalysis.cpp main.cpp -lpthread -o main   # Compile all relevant files
+if [ $? -ne 0 ]; then
+    echo "Compilation failed. Exiting."
+    exit 1
+fi
+
+chmod +x main                             # Ensure the executable is runnable
+
+# Run the program
+./main                                     # Execute the compiled program
+
