@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=test             # Name of the job you're running
+#SBATCH --job-name=Temperature_Analysis_SMP             # Name of the job you're running
 #SBATCH --nodes=1                    # Number of nodes requested
 #SBATCH --ntasks-per-node=28         # Number of tasks per node
 #SBATCH --cluster=smp                # Cluster type: smp
@@ -18,6 +18,7 @@ module load intel/2017.1.132 intel-mpi/2017.1.132 fhiaims/160328_3
 cp TemperatureAnalysis.cpp $SLURM_SCRATCH
 cp TemperatureAnalysis.h $SLURM_SCRATCH
 cp main.cpp $SLURM_SCRATCH           # Adjusted filename for consistency
+cp bigw12.log $SLURM_SCRATCH
 
 cd $SLURM_SCRATCH                     # Change directory to scratch space
 
@@ -28,7 +29,7 @@ run_on_exit() {
 trap run_on_exit EXIT
 
 # Compile the program with pthreads
-g++ TemperatureAnalysis.cpp main.cpp -lpthread -o main   # Compile all relevant files
+g++ -std=c++11 TemperatureAnalysis.cpp main.cpp -lpthread -o main   # Compile all relevant files
 if [ $? -ne 0 ]; then
     echo "Compilation failed. Exiting."
     exit 1
