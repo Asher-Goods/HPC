@@ -2,7 +2,6 @@
 
 using namespace std;
 
-
 TemperatureAnalysis::TemperatureAnalysis() {}
 
 TemperatureAnalysis::~TemperatureAnalysis() {
@@ -13,7 +12,7 @@ TemperatureAnalysis::~TemperatureAnalysis() {
 
 // Used to initialize and open the file
 bool TemperatureAnalysis::initializeFile(const string& filename) {
-    inputFile.open(filename);
+    inputFile.open(filename.c_str()); // Use c_str() to convert string to const char*
     return inputFile.is_open();
 }
 
@@ -63,9 +62,8 @@ void TemperatureAnalysis::processTemperatureData(void) {
     }
 }
 
-
 void TemperatureAnalysis::generateReport(const std::string& reportName) {
-    std::ofstream reportFile(reportName);
+    std::ofstream reportFile(reportName.c_str()); // Use c_str() to convert string to const char*
     if (!reportFile.is_open()) {
         std::cerr << "Error opening report file!" << std::endl;
         return;
@@ -100,7 +98,6 @@ void TemperatureAnalysis::generateReport(const std::string& reportName) {
     std::cout << "Report generated: " << reportName << std::endl;
 }
 
-
 // Parses a line of temperature data
 TemperatureData TemperatureAnalysis::parseLine(const std::string& line) {
     stringstream ss(line);
@@ -109,9 +106,8 @@ TemperatureData TemperatureAnalysis::parseLine(const std::string& line) {
     int month, day, year, hour, minute, second;
     float temperature;
 
-
     if (line.empty()) {
-        return TemperatureData(INT_MAX,0,0,0,0,0,0.0);  // Return an empty object for an empty line
+        return TemperatureData(INT_MAX, 0, 0, 0, 0, 0, 0.0);  // Return an empty object for an empty line
     }
 
     // store date into temporary fields
@@ -121,7 +117,6 @@ TemperatureData TemperatureAnalysis::parseLine(const std::string& line) {
     // store temperature
     ss >> temperature >> delim;
 
-    // printf("Date = %d/%d/%d\t Time = %d:%d:%d\t Temp = %f\n", month, day, year, hour, minute, second, temperature);
     return TemperatureData(month, day, year, hour, minute, second, temperature);
 }
 

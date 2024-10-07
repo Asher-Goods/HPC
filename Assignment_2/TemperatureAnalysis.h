@@ -10,7 +10,6 @@
 #include <sstream>
 #include <limits.h>
 
-
 using namespace std;
 
 // Public structure to hold temperature data
@@ -57,11 +56,8 @@ public:
     // Public function to generate report with standard deviation and mean information for each month
     void generateReport(const std::string &reportName);
 
-    
-
 private:
     // Private helper methods
-    
     bool isAnomaly(double currentTemp, double previousTemp);
     string getHourlyTimestamp(const string &date, const string &time);
     int getMonthFromTimeStamp(const string &timestamp);
@@ -69,7 +65,7 @@ private:
     double calculateMean(const vector<double> &temps);
     double calculateStdDev(const vector<double> &temps, double mean);
     ifstream inputFile;
-    map<int, vector<double>> dataset;
+    map<int, vector<double> > dataset; // Space added between '>' for nested templates
 };
 
 #endif // TEMPERATURE_ANALYSIS_H
