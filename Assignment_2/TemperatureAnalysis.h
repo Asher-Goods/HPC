@@ -23,18 +23,8 @@ struct TemperatureData
     int second;
     double temperature;
 
-    // Constructor with clear parameter names
-    TemperatureData(int month, int day, int year, int hour, int minute, int second, double temperature) 
+    TemperatureData(int month, int day, int year, int hour, int minute, int second, double temperature)
         : month(month), day(day), year(year), hour(hour), minute(minute), second(second), temperature(temperature) {}
-};
-
-// Public structure to hold hourly data
-struct HourlyData
-{
-    double sum; // Sum of temperatures for the hour
-    int count;  // Count of readings for the hour
-
-    HourlyData() : sum(0.0), count(0) {} // Constructor to initialize sum and count
 };
 
 // TemperatureAnalysis class to encapsulate functionality
@@ -47,25 +37,51 @@ public:
     // Destructor (to close file if necessary)
     ~TemperatureAnalysis();
 
-    // Public interface to initialize the file
+    /**
+     * Used to initialize and open the file
+     * @arg filename - name of data file
+     * @retval True if the file exists, false otherwise
+     */    
     bool initializeFile(const string &filename);
 
-    // Public function to process the temperature data
+    /**
+     * Data is parsed in from the log file containing temperature information. Each data point is
+     * then synthesized to store the average value for each hour. Each hour is then bucketed into
+     * the dataset field which is mapped by month.
+     */
     void processTemperatureData();
 
-    // Public function to generate report with standard deviation and mean information for each month
+    /**
+     * An output file is opened which reports the mean temperature value of each month
+     * and the respective standard deviation. This is achieved by looping through each
+     * month bucket and performing algebraic operations.
+     * @arg reportName - name of file to output report to
+     */
     void generateReport(const std::string &reportName);
 
 private:
-    // Private helper methods
+    /**
+     * Determines if the current temperature is an anomaly by comparing it to the previous temperature.
+     * If there is a difference of two or more degrees, then the data point will be thrown out
+     * @arg currentTemp - temperature which is being checked as an anomaly
+     * @arg previousTemp - average temperature of the hourly bucket
+     * @retval true if currentTemp is an anomaly, false otherwise
+     */
     bool isAnomaly(double currentTemp, double previousTemp);
-    string getHourlyTimestamp(const string &date, const string &time);
-    int getMonthFromTimeStamp(const string &timestamp);
+    /**
+     * Parses string that is read in from the temperature log file. It stores the date, time,
+     * and temperature into separate fields and wraps them in a TemperatureData struct object
+     * which is then returned such that data from each reading can be easily accessed.
+     * @arg line - string from the log file
+     * @retval struct defined in TemperatureAnalysis.h which holds date, time, temperature
+     */
     TemperatureData parseLine(const string &line);
-    double calculateMean(const vector<double> &temps);
-    double calculateStdDev(const vector<double> &temps, double mean);
+
+    // private instantiation of input file field
     ifstream inputFile;
-    map<int, vector<double> > dataset; // Space added between '>' for nested templates
+    // A map whos key is an integer which corresponds to each month.
+    // For each month, there is a vector containing the average hourly data for the entire month
+    map<int, vector<double>> dataset;
 };
 
 #endif // TEMPERATURE_ANALYSIS_H
