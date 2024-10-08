@@ -143,7 +143,8 @@ TemperatureData TemperatureAnalysis::parseLine(const std::string &line)
 
     if (line.empty())
     {
-        return TemperatureData(INT_MAX, 0, 0, 0, 0, 0, 0.0); // Return an empty object for an empty line
+        // Return an empty object for an empty line
+        return TemperatureData(INT_MAX, 0, 0, 0, 0, 0, 0.0); 
     }
 
     // store date into temporary fields
