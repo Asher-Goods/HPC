@@ -245,6 +245,7 @@ void TemperatureAnalysis::setCoolingMonths(const vector<int>& months) {
     coolingMonths = months;
 }
 
+
 void* TemperatureAnalysis::processHeatingMonth(void* args) {
     ReportArgs* reportArgs = (ReportArgs*)args;
     TemperatureAnalysis* analysis = reportArgs->analysis;
