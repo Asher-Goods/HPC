@@ -14,6 +14,7 @@
 #include <tuple>
 #include <mutex>
 #include <iostream>
+#include <unordered_map>
 
 using namespace std;
 
@@ -83,6 +84,8 @@ public:
      */
     void generateReport(const std::string &reportName);
 
+    void calculateMonthlyMeans(void);
+
 private:
     /**
      * Used to initialize and open the file
@@ -131,12 +134,13 @@ private:
      * @return NULL
      */
     void* reportMonth(void* args);
-    
 
     // private instantiation of input file field
     ifstream inputFile;
     // data set which contains all the parsed file data
     map<hourlyData, tuple<double, int>> dataset;
+    // holds each month's mean and standard deviation
+    tuple<double, double> monthlyData[12];
 
     // mutexes to ensure no write errors
     mutex datasetMutex;

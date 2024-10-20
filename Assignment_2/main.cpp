@@ -47,6 +47,7 @@ int main() {
     gettimeofday(&start, NULL); // Start timer
 
     string outputFile = "outputData.log";
+    // analysis.calculateMonthlyMeans();
     analysis.generateReport(outputFile);
 
     gettimeofday(&end, NULL); // Stop timer
