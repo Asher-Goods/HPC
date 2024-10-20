@@ -2,14 +2,23 @@
 
 using namespace std;
 
-TemperatureAnalysis::TemperatureAnalysis(string filename) {
+TemperatureAnalysis::TemperatureAnalysis(const std::string &filename) {
     this->numThreads = 12;
-    initializeFile(filename);
+    initializeFile(filename); // Ensure file is opened successfully
 
     this->fileSize = inputFile.tellg();  // Get file size
+    if (fileSize <= 0) {
+        std::cerr << "File is empty or couldn't determine file size." << std::endl;
+        exit(EXIT_FAILURE); // Handle file size error
+    }
+    
     inputFile.seekg(0, std::ios::beg);  // Reset file position to beginning
     this->segmentSize = fileSize / numThreads;
+
+    // Optional: Print out the initialized values for debugging
+    std::cout << "File Size: " << fileSize << ", Segment Size: " << segmentSize << std::endl;
 }
+
 
 TemperatureAnalysis::~TemperatureAnalysis()
 {
@@ -24,14 +33,14 @@ TemperatureAnalysis::~TemperatureAnalysis()
  * @arg filename - name of data file
  * @retval True if the file exists, false otherwise
  */
-bool TemperatureAnalysis::initializeFile(const string &filename)
-{
-    inputFile.open(filename.c_str()); // Use c_str() to convert string to const char*
+void TemperatureAnalysis::initializeFile(const std::string &filename) {
+    inputFile.open(filename);
     if (!inputFile.is_open()) {
-        std::cerr << "Error: Could not open file" << std::endl;
-        return false;
+        std::cerr << "Error opening file: " << filename << std::endl;
+        exit(EXIT_FAILURE); // Handle file open error appropriately
     }
-    return true;
+    // Seek to the end to determine file size
+    inputFile.seekg(0, std::ios::end);
 }
 
 /**
@@ -41,22 +50,23 @@ bool TemperatureAnalysis::initializeFile(const string &filename)
  */
 void TemperatureAnalysis::processTemperatureData(void) {
     pthread_t threads[numThreads];
-    ThreadArgs threadArgs[numThreads];
 
     // Create threads to process the file
     for (int i = 0; i < numThreads; ++i) {
-        threadArgs[i].startPosition = i * segmentSize;
-        threadArgs[i].endPosition = (i == numThreads - 1) ? fileSize : (i + 1) * segmentSize;
-        threadArgs[i].threadId = i;
-        threadArgs[i].analysis = this; // Assign this to the analysis member
+        ThreadArgs* threadArgs = new ThreadArgs(); // Dynamically allocate new ThreadArgs
+        threadArgs->startPosition = i * segmentSize;
+        threadArgs->endPosition = (i == numThreads - 1) ? fileSize : (i + 1) * segmentSize;
+        threadArgs->threadId = i;
+        threadArgs->analysis = this; // Assign this to the analysis member
 
         int ret = pthread_create(&threads[i], NULL, [](void* args) -> void* {
             ThreadArgs* threadArgs = static_cast<ThreadArgs*>(args);
             return threadArgs->analysis->processSegment(args);
-        }, (void*)&threadArgs[i]);
+        }, threadArgs); // Pass the dynamically allocated threadArgs
 
         if (ret) {
             std::cerr << "Error creating thread " << i << ": " << ret << std::endl;
+            delete threadArgs; // Cleanup if thread creation fails
             return;  // Handle thread creation error
         }
     }
@@ -69,6 +79,7 @@ void TemperatureAnalysis::processTemperatureData(void) {
     // close file
     inputFile.close();
 }
+
 
 /**
  * Processes a segment of the temperature data from the input file.
@@ -99,6 +110,7 @@ void* TemperatureAnalysis::processSegment(void* args)
     std::string line;
     while (inputFile.tellg() < endPos && getline(inputFile, line)) {
         TemperatureData data = parseLine(line);
+
         if (data.hour == INT_MAX) {
             continue;  // Skip invalid data lines
         }
@@ -132,28 +144,28 @@ void* TemperatureAnalysis::processSegment(void* args)
  */
 void TemperatureAnalysis::generateReport(const std::string &reportName)
 {
-    std::ofstream reportFile(reportName.c_str()); // Use c_str() to convert string to const char*
-    if (!reportFile.is_open())
-    {
+    std::ofstream reportFile(reportName.c_str());
+    if (!reportFile.is_open()) {
         std::cerr << "Error opening report file!" << std::endl;
         return;
     }
 
     pthread_t threads[12];
-    int monthArgs[12];
+    ThreadArgs threadArgs[12];
 
     // Create threads to process each month
     for (int month = 1; month <= 12; ++month) {
-        monthArgs[month - 1] = month; // Store the month in args
+        threadArgs[month - 1].threadId = month - 1; // Store the month in args
+        threadArgs[month - 1].analysis = this; // Store the pointer to the TemperatureAnalysis instance
 
         int ret = pthread_create(&threads[month - 1], NULL, [](void* args) -> void* {
-            // Extract the month from the args
-            int month = *((int*)args);
-            return static_cast<TemperatureAnalysis*>(args)->reportMonth(args);
-        }, (void*)&monthArgs[month - 1]);
+            ThreadArgs* threadArgs = static_cast<ThreadArgs*>(args);
+            return threadArgs->analysis->reportMonth(args); // Call reportMonth with args
+        }, (void*)&threadArgs[month - 1]);
 
         if (ret) {
             std::cerr << "Error creating thread for month " << month << ": " << ret << std::endl;
+            reportFile.close(); // Close the file before returning
             return; // Handle thread creation error
         }
     }
@@ -166,6 +178,8 @@ void TemperatureAnalysis::generateReport(const std::string &reportName)
     reportFile.close();
 }
 
+
+
 /**
  * Calculates the mean temperature and standard deviation for a specified month.
  * This method is intended to be executed by a thread and retrieves data from
@@ -176,7 +190,8 @@ void TemperatureAnalysis::generateReport(const std::string &reportName)
  * @return NULL
  */
 void* TemperatureAnalysis::reportMonth(void* args) {
-    int month = *((int*)args); // Get the month from the args
+    ThreadArgs* threadArgs = static_cast<ThreadArgs*>(args);
+    int month = threadArgs->threadId + 1; 
     double sum = 0.0;
     int count = 0;
 

@@ -62,7 +62,7 @@ struct ThreadArgs {
 
 public:
     // Constructor
-    TemperatureAnalysis(string filename);
+    TemperatureAnalysis(const std::string &filename);
 
     // Destructor (to close file if necessary)
     ~TemperatureAnalysis();
@@ -89,7 +89,7 @@ private:
      * @param filename - name of data file
      * @retval True if the file exists, false otherwise
      */    
-    bool initializeFile(const string &filename);
+    void initializeFile(const std::string &filename);
 
     /**
      * Determines if the current temperature is an anomaly by comparing it to the previous temperature.
