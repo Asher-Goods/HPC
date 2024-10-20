@@ -79,9 +79,7 @@ private:
 
     // private instantiation of input file field
     ifstream inputFile;
-    // A map whos key is an integer which corresponds to each month.
-    // For each month, there is a vector containing the average hourly data for the entire month
-    map<int, vector<double>> dataset;
+    map<int, vector<double> > dataset;
 };
 
 #endif // TEMPERATURE_ANALYSIS_H
