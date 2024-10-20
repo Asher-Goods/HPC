@@ -1,3 +1,4 @@
 *.log
 .vscode
 Assignment_2/buildg
+*.o
