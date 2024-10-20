@@ -2,7 +2,14 @@
 
 using namespace std;
 
-TemperatureAnalysis::TemperatureAnalysis() {}
+TemperatureAnalysis::TemperatureAnalysis(string filename) {
+    this->numThreads = 12;
+    initializeFile(filename);
+
+    this->fileSize = inputFile.tellg();  // Get file size
+    inputFile.seekg(0, std::ios::beg);  // Reset file position to beginning
+    this->segmentSize = fileSize / numThreads;
+}
 
 TemperatureAnalysis::~TemperatureAnalysis()
 {
@@ -20,69 +27,108 @@ TemperatureAnalysis::~TemperatureAnalysis()
 bool TemperatureAnalysis::initializeFile(const string &filename)
 {
     inputFile.open(filename.c_str()); // Use c_str() to convert string to const char*
-    return inputFile.is_open();
+    if (!inputFile.is_open()) {
+        std::cerr << "Error: Could not open file" << std::endl;
+        return false;
+    }
+    return true;
 }
 
 /**
- * Data is parsed in from the log file containing temperature information. Each data point is
- * then synthesized to store the average value for each hour. Each hour is then bucketed into
- * the dataset field which is mapped by month.
+ * Processes temperature data from a log file in parallel using multiple threads.
+ * Each thread handles a segment of the file, parsing temperature records and
+ * updating the shared dataset with average temperature values for each hour.
  */
-void TemperatureAnalysis::processTemperatureData(void)
-{
-    string line = "";
-    int current_hour = -1;
-    double count = 0;
-    double sum = 0;
-    int last_month = -1; // Variable to store the last month processed
+void TemperatureAnalysis::processTemperatureData(void) {
+    pthread_t threads[numThreads];
+    ThreadArgs threadArgs[numThreads];
 
-    while (getline(inputFile, line))
-    {
-        TemperatureData data = parseLine(line);
-        if (data.hour == INT_MAX)
-        { // Skip invalid data lines
-            continue;
+    // Create threads to process the file
+    for (int i = 0; i < numThreads; ++i) {
+        threadArgs[i].startPosition = i * segmentSize;
+        threadArgs[i].endPosition = (i == numThreads - 1) ? fileSize : (i + 1) * segmentSize;
+        threadArgs[i].threadId = i;
+        threadArgs[i].analysis = this; // Assign this to the analysis member
+
+        int ret = pthread_create(&threads[i], NULL, [](void* args) -> void* {
+            ThreadArgs* threadArgs = static_cast<ThreadArgs*>(args);
+            return threadArgs->analysis->processSegment(args);
+        }, (void*)&threadArgs[i]);
+
+        if (ret) {
+            std::cerr << "Error creating thread " << i << ": " << ret << std::endl;
+            return;  // Handle thread creation error
         }
-
-        // Insert the average temperature for the last hour if moving to a new hour
-        if (current_hour != data.hour)
-        {
-            if (current_hour != -1 && count > 0 && last_month != -1)
-            {
-                dataset[last_month].push_back(sum / count);
-            }
-            current_hour = data.hour;
-            count = 0;
-            sum = 0;
-        }
-
-        // Update the last month processed
-        last_month = data.month;
-
-        // Check for anomalies
-        double previousTemp = (count > 0) ? (sum / count) : data.temperature;
-        if (count > 0 && isAnomaly(data.temperature, previousTemp))
-        {
-            continue;
-        }
-
-        // Accumulate temperature
-        sum += data.temperature;
-        count++;
     }
 
-    // Handle the last hour in the file
-    if (count > 0 && last_month != -1)
-    {
-        dataset[last_month].push_back(sum / count);
+    // Join threads
+    for (int i = 0; i < numThreads; ++i) {
+        pthread_join(threads[i], NULL);
     }
+
+    // close file
+    inputFile.close();
 }
 
 /**
- * An output file is opened which reports the mean temperature value of each month
- * and the respective standard deviation. This is achieved by looping through each
- * month bucket and performing algebraic operations.
- * @arg reportName - name of file to output report to
+ * Processes a segment of the temperature data from the input file.
+ * This method is intended to be executed by a thread and reads from the
+ * specified start and end positions of the file. It parses each line of
+ * data, updates the shared dataset, and ensures thread safety using a mutex.
+ *
+ * @param args Pointer to ThreadArgs struct containing the start and end 
+ *             positions for processing, as well as the thread's ID.
+ * @return NULL
+ */
+void* TemperatureAnalysis::processSegment(void* args)
+{
+    ThreadArgs* threadArgs = (ThreadArgs*)args;
+    
+    long startPos = threadArgs->startPosition;
+    long endPos = threadArgs->endPosition;
+    
+    // Seek to the start position
+    inputFile.seekg(startPos);
+
+    // Ensure we start at the beginning of a line
+    if (startPos != 0) {
+        std::string temp;
+        std::getline(inputFile, temp);
+    }
+
+    std::string line;
+    while (inputFile.tellg() < endPos && getline(inputFile, line)) {
+        TemperatureData data = parseLine(line);
+        if (data.hour == INT_MAX) {
+            continue;  // Skip invalid data lines
+        }
+
+        hourlyData current_hour(data.month, data.day, data.hour);
+
+        // Lock mutex to safely update the shared dataset
+        datasetMutex.lock();
+        if (dataset.find(current_hour) == dataset.end()) {
+            dataset[current_hour] = std::make_tuple(data.temperature, 1);
+        } else {
+            double previous_temp = std::get<0>(dataset[current_hour]) / std::get<1>(dataset[current_hour]);
+            if (!isAnomaly(data.temperature, previous_temp)) {
+                dataset[current_hour] = std::make_tuple(
+                    std::get<0>(dataset[current_hour]) + data.temperature,
+                    std::get<1>(dataset[current_hour]) + 1
+                );
+            }
+        }
+        datasetMutex.unlock();
+    }
+    return NULL;
+}
+
+/**
+ * Generates a report of mean temperatures and standard deviations for each month.
+ * This method creates threads to calculate statistics for each month and
+ * writes the results to a specified output file.
+ *
+ * @param reportName The name of the file where the report will be written.
  */
 void TemperatureAnalysis::generateReport(const std::string &reportName)
 {
@@ -93,37 +139,87 @@ void TemperatureAnalysis::generateReport(const std::string &reportName)
         return;
     }
 
-    for (int month = 1; month <= 12; ++month)
-    {
-        if (dataset[month].empty())
-        { // Check if there is data for this month
-            reportFile << "Month: " << month << " - No data available\n";
-            continue;
-        }
+    pthread_t threads[12];
+    int monthArgs[12];
 
-        // Calculate the mean for the current month
-        double sum = 0.0;
-        for (double temp : dataset[month])
-        {
-            sum += temp;
-        }
-        double mean = sum / dataset[month].size();
+    // Create threads to process each month
+    for (int month = 1; month <= 12; ++month) {
+        monthArgs[month - 1] = month; // Store the month in args
 
-        // Calculate the standard deviation for the current month
-        double varianceSum = 0.0;
-        for (double temp : dataset[month])
-        {
-            varianceSum += std::pow(temp - mean, 2);
-        }
-        double stddev = std::sqrt(varianceSum / dataset[month].size());
+        int ret = pthread_create(&threads[month - 1], NULL, [](void* args) -> void* {
+            // Extract the month from the args
+            int month = *((int*)args);
+            return static_cast<TemperatureAnalysis*>(args)->reportMonth(args);
+        }, (void*)&monthArgs[month - 1]);
 
-        // Write report for this month
-        reportFile << "Month: " << month << " | Mean Temperature: " << mean
-                   << " | Standard Deviation: " << stddev << endl;
+        if (ret) {
+            std::cerr << "Error creating thread for month " << month << ": " << ret << std::endl;
+            return; // Handle thread creation error
+        }
+    }
+
+    // Join threads
+    for (int i = 0; i < 12; ++i) {
+        pthread_join(threads[i], NULL);
     }
 
     reportFile.close();
-    std::cout << "Report generated: " << reportName << std::endl;
+}
+
+/**
+ * Calculates the mean temperature and standard deviation for a specified month.
+ * This method is intended to be executed by a thread and retrieves data from
+ * the shared dataset, computing the statistics while ensuring thread safety.
+ *
+ * @param args Pointer to an integer representing the month for which to 
+ *             calculate the statistics.
+ * @return NULL
+ */
+void* TemperatureAnalysis::reportMonth(void* args) {
+    int month = *((int*)args); // Get the month from the args
+    double sum = 0.0;
+    int count = 0;
+
+    // Lock the mutex to access the dataset safely
+    datasetMutex.lock();
+    for (const auto& entry : dataset) {
+        const hourlyData& hData = entry.first;
+        const std::tuple<double, int>& tempData = entry.second;
+
+        // Check if the month matches
+        if (hData.month == month) {
+            sum += std::get<0>(tempData);
+            count += std::get<1>(tempData);
+        }
+    }
+    datasetMutex.unlock();
+
+    double mean = (count > 0) ? sum / count : 0.0;
+
+    // Calculate the standard deviation
+    double varianceSum = 0.0;
+    datasetMutex.lock();
+    for (const auto& entry : dataset) {
+        const hourlyData& hData = entry.first;
+        const std::tuple<double, int>& tempData = entry.second;
+
+        // Check if the month matches
+        if (hData.month == month) {
+            double temp = std::get<0>(tempData) / std::get<1>(tempData); // Average temperature for that hour
+            varianceSum += std::pow(temp - mean, 2);
+        }
+    }
+    datasetMutex.unlock();
+
+    double stddev = (count > 0) ? std::sqrt(varianceSum / count) : 0.0;
+
+    // Lock the report mutex to safely write to the report file
+    reportMutex.lock();
+    std::cout << "Month: " << month << " | Mean Temperature: " << mean
+              << " | Standard Deviation: " << stddev << std::endl;
+    reportMutex.unlock();
+
+    return NULL;
 }
 
 /**
