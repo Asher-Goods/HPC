@@ -10,17 +10,15 @@
 #include <sstream>
 #include <limits.h>
 #include <pthread.h>
-#include <map>
 #include <tuple>
+#include <algorithm>
 #include <mutex>
-#include <iostream>
 #include <unordered_map>
 
 using namespace std;
 
 // Public structure to hold temperature data
-struct TemperatureData
-{
+struct TemperatureData {
     int month;
     int day;
     int year;
@@ -33,37 +31,42 @@ struct TemperatureData
         : month(month), day(day), year(year), hour(hour), minute(minute), second(second), temperature(temperature) {}
 };
 
-struct hourlyData
-{
+struct hourlyData {
+    int year;
     int month;
     int day;
     int hour;
 
     // Overload the < operator for comparison
     bool operator<(const hourlyData& other) const {
+        if (year != other.year) return year < other.year; // Compare year first
         if (month != other.month) return month < other.month;
         if (day != other.day) return day < other.day;
         return hour < other.hour;
     }
 
-    hourlyData(int month, int day, int hour) : month(month), day(day), hour(hour) {}
+    hourlyData(int year, int month, int day, int hour) : year(year), month(month), day(day), hour(hour) {}
 };
 
 // TemperatureAnalysis class to encapsulate functionality
-class TemperatureAnalysis
-{
-
-// From chat GPT
-struct ThreadArgs {
-    long startPosition;         // Start position for this thread
-    long endPosition;           // End position for this thread
-    int threadId;              // ID for the thread
-    TemperatureAnalysis* analysis;  // Pointer to TemperatureAnalysis instance
-};
-
+class TemperatureAnalysis {
 public:
+    // Struct to hold arguments for thread functions
+    struct ThreadArgs {
+        long startPosition;         // Start position for this thread
+        long endPosition;           // End position for this thread
+        int threadId;              // ID for the thread
+        TemperatureAnalysis* analysis;  // Pointer to TemperatureAnalysis instance
+    };
+
+    struct ReportArgs {
+        TemperatureAnalysis* analysis;
+        int month;
+        std::ofstream* reportFile;
+    };
+
     // Constructor
-    TemperatureAnalysis(const std::string &filename);
+    TemperatureAnalysis(const string &filename);
 
     // Destructor (to close file if necessary)
     ~TemperatureAnalysis();
@@ -82,9 +85,10 @@ public:
      *
      * @param reportName The name of the file where the report will be written.
      */
-    void generateReport(const std::string &reportName);
+    void generateReport(const string &reportName);
 
-    void calculateMonthlyMeans(void);
+    void setHeatingMonths(const vector<int>& months);
+    void setCoolingMonths(const vector<int>& months);
 
 private:
     /**
@@ -125,31 +129,37 @@ private:
     void* processSegment(void* args);
 
     /**
-     * Calculates the mean temperature and standard deviation for a specified month.
-     * This method is intended to be executed by a thread and retrieves data from
-     * the shared dataset, computing the statistics while ensuring thread safety.
-     *
-     * @param args Pointer to an integer representing the month for which to 
-     *             calculate the statistics.
+     * Thread function to process a segment of the temperature data from the input file.
+     * This function is static, allowing it to be passed to pthread_create.
+     * @param args Pointer to ThreadArgs struct containing the start and end positions for processing.
      * @return NULL
      */
-    void* reportMonth(void* args);
+    static void* threadFunction(void* args);
 
-    // private instantiation of input file field
+    static void* processHeatingMonth(void* args);
+
+    static void* processCoolingMonth(void* args);
+
+
+
+    // Private instantiation of input file field
     ifstream inputFile;
-    // data set which contains all the parsed file data
+    // Data set which contains all the parsed file data
     map<hourlyData, tuple<double, int>> dataset;
-    // holds each month's mean and standard deviation
+    // Holds each month's mean and standard deviation
     tuple<double, double> monthlyData[12];
 
-    // mutexes to ensure no write errors
+    // Mutexes to ensure no write errors
     mutex datasetMutex;
-    mutex reportMutex;
+    pthread_mutex_t reportMutex;
 
-    // file characteristics
+    // File characteristics
     int numThreads;
     long fileSize;
     long segmentSize;
+
+    vector<int> heatingMonths;
+    vector<int> coolingMonths;
 };
 
 #endif // TEMPERATURE_ANALYSIS_H
