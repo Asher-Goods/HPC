@@ -144,13 +144,15 @@ private:
 
     // Private instantiation of input file field
     ifstream inputFile;
+    map<hourlyData, vector<double>> dataset;
     // Data set which contains all the parsed file data
-    map<hourlyData, tuple<double, int>> dataset;
+    map<hourlyData, tuple<double, int>> hourlyAvg;
     // Holds each month's mean and standard deviation
     tuple<double, double> monthlyData[12];
 
     // Mutexes to ensure no write errors
     mutex datasetMutex;
+    mutex hourlyAvgMutex;
     pthread_mutex_t reportMutex;
 
     // File characteristics

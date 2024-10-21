@@ -1,4 +1,4 @@
-CMakeFiles/run.dir/main.cpp.o: /home/HPC/Assignment_2/main.cpp \
+CMakeFiles/run.dir/main.cpp.o: /home/asher/HPC/Assignment_2/main.cpp \
  /usr/include/stdc-predef.h /usr/include/c++/13/iostream \
  /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
@@ -145,8 +145,8 @@ CMakeFiles/run.dir/main.cpp.o: /home/HPC/Assignment_2/main.cpp \
  /usr/include/c++/13/bits/ostream.tcc /usr/include/c++/13/istream \
  /usr/include/c++/13/bits/istream.tcc \
  /usr/include/x86_64-linux-gnu/sys/time.h \
- /home/HPC/Assignment_2/TemperatureAnalysis.h /usr/include/c++/13/fstream \
- /usr/include/c++/13/bits/codecvt.h \
+ /home/asher/HPC/Assignment_2/TemperatureAnalysis.h \
+ /usr/include/c++/13/fstream /usr/include/c++/13/bits/codecvt.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++io.h \
  /usr/include/c++/13/bits/fstream.tcc /usr/include/c++/13/vector \

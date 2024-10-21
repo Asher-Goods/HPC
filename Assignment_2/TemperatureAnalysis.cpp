@@ -2,17 +2,19 @@
 
 using namespace std;
 
-TemperatureAnalysis::TemperatureAnalysis(const string &filename) {
+TemperatureAnalysis::TemperatureAnalysis(const string &filename)
+{
     this->numThreads = 12;
     initializeFile(filename); // Ensure file is opened successfully
 
-    this->fileSize = inputFile.tellg();  // Get file size
-    if (fileSize <= 0) {
+    this->fileSize = inputFile.tellg(); // Get file size
+    if (fileSize <= 0)
+    {
         cerr << "File is empty or couldn't determine file size." << endl;
         exit(EXIT_FAILURE); // Handle file size error
     }
-    
-    inputFile.seekg(0, ios::beg);  // Reset file position to beginning
+
+    inputFile.seekg(0, ios::beg); // Reset file position to beginning
     this->segmentSize = fileSize / numThreads;
 
     // Optional: Print out the initialized values for debugging
@@ -29,7 +31,6 @@ TemperatureAnalysis::~TemperatureAnalysis()
     }
 
     pthread_mutex_destroy(&reportMutex); // Destroy the mutex
-
 }
 
 /**
@@ -37,9 +38,11 @@ TemperatureAnalysis::~TemperatureAnalysis()
  * @arg filename - name of data file
  * @retval True if the file exists, false otherwise
  */
-void TemperatureAnalysis::initializeFile(const string &filename) {
+void TemperatureAnalysis::initializeFile(const string &filename)
+{
     inputFile.open(filename);
-    if (!inputFile.is_open()) {
+    if (!inputFile.is_open())
+    {
         cerr << "Error opening file: " << filename << endl;
         exit(EXIT_FAILURE); // Handle file open error appropriately
     }
@@ -52,12 +55,14 @@ void TemperatureAnalysis::initializeFile(const string &filename) {
  * Each thread handles a segment of the file, parsing temperature records and
  * updating the shared dataset with average temperature values for each hour.
  */
-void TemperatureAnalysis::processTemperatureData(void) {
+void TemperatureAnalysis::processTemperatureData(void)
+{
     pthread_t threads[numThreads];
-    ThreadArgs* threadArgs[numThreads];  // Declare an array of ThreadArgs pointers
+    ThreadArgs *threadArgs[numThreads]; // Declare an array of ThreadArgs pointers
 
     // Create threads to process the file
-    for (int i = 0; i < numThreads; ++i) {
+    for (int i = 0; i < numThreads; ++i)
+    {
         threadArgs[i] = new ThreadArgs(); // Dynamically allocate new ThreadArgs for each thread
         threadArgs[i]->startPosition = i * segmentSize;
         threadArgs[i]->endPosition = (i == numThreads - 1) ? fileSize : (i + 1) * segmentSize;
@@ -66,15 +71,17 @@ void TemperatureAnalysis::processTemperatureData(void) {
 
         int ret = pthread_create(&threads[i], NULL, &TemperatureAnalysis::threadFunction, threadArgs[i]); // Use static member function
 
-        if (ret) {
+        if (ret)
+        {
             cerr << "Error creating thread " << i << ": " << ret << endl;
             delete threadArgs[i]; // Cleanup if thread creation fails
-            return;  // Handle thread creation error
+            return;               // Handle thread creation error
         }
     }
 
     // Join threads
-    for (int i = 0; i < numThreads; ++i) {
+    for (int i = 0; i < numThreads; ++i)
+    {
         pthread_join(threads[i], NULL);
         delete threadArgs[i]; // Clean up allocated memory for each threadArgs
     }
@@ -88,8 +95,9 @@ void TemperatureAnalysis::processTemperatureData(void) {
  * @param args Pointer to ThreadArgs struct containing the start and end positions for processing.
  * @return NULL
  */
-void* TemperatureAnalysis::threadFunction(void* args) {
-    ThreadArgs* threadArgs = (ThreadArgs*)args;
+void *TemperatureAnalysis::threadFunction(void *args)
+{
+    ThreadArgs *threadArgs = (ThreadArgs *)args;
     return threadArgs->analysis->processSegment(args);
 }
 
@@ -98,51 +106,70 @@ void* TemperatureAnalysis::threadFunction(void* args) {
  * @param args Pointer to ThreadArgs struct containing the start and end positions for processing.
  * @return NULL
  */
-void* TemperatureAnalysis::processSegment(void* args)
+void *TemperatureAnalysis::processSegment(void *args)
 {
-    ThreadArgs* threadArgs = (ThreadArgs*)args;
-    
+    ThreadArgs *threadArgs = (ThreadArgs *)args;
+
     long startPos = threadArgs->startPosition;
     long endPos = threadArgs->endPosition;
-    
+
     // Seek to the start position
     inputFile.seekg(startPos);
 
     // Ensure we start at the beginning of a line
-    if (startPos != 0) {
+    if (startPos != 0)
+    {
         string temp;
         getline(inputFile, temp);
     }
 
     string line;
-    while (inputFile.tellg() < endPos && getline(inputFile, line)) {
+    while (inputFile.tellg() < endPos && getline(inputFile, line))
+    {
         TemperatureData data = parseLine(line);
 
-        if (data.hour == INT_MAX) {
-            continue;  // Skip invalid data lines
+        if (data.hour == INT_MAX)
+        {
+            continue; // Skip invalid data lines
         }
 
-        if (find(coolingMonths.begin(), coolingMonths.end(), data.month) == coolingMonths.end() && find(heatingMonths.begin(), heatingMonths.end(), data.month) == heatingMonths.end()) {
+        if (find(coolingMonths.begin(), coolingMonths.end(), data.month) == coolingMonths.end() && find(heatingMonths.begin(), heatingMonths.end(), data.month) == heatingMonths.end())
+        {
             continue; // skip months we dont care about
         }
 
         hourlyData current_hour(data.year, data.month, data.day, data.hour);
 
-        // Lock mutex to safely update the shared dataset
+        // populate the dataset by hour
         datasetMutex.lock();
-        // Update the dataset access logic in processSegment
-        if (dataset.find(current_hour) == dataset.end()) {
-            dataset[current_hour] = std::make_tuple(data.temperature, 1);
-        } else {
-            double previous_temp = std::get<0>(dataset[current_hour]) / std::get<1>(dataset[current_hour]);
-            if (!isAnomaly(data.temperature, previous_temp)) {
-                dataset[current_hour] = std::make_tuple(
-                    std::get<0>(dataset[current_hour]) + data.temperature,
-                    std::get<1>(dataset[current_hour]) + 1
-                );
+        if (dataset.find(current_hour) != dataset.end() && !dataset[current_hour].empty()) {
+            // If the current hour exists and the vector is not empty, check for anomaly
+            if (!isAnomaly(dataset[current_hour].back(), data.temperature)) {
+                dataset[current_hour].push_back(data.temperature);
+            } else {
+                datasetMutex.unlock();
+                continue;  // Skip if there's no anomaly
             }
+        } else {
+            // If current hour doesn't exist or the vector is empty, add the temperature directly
+            dataset[current_hour].push_back(data.temperature);
         }
         datasetMutex.unlock();
+
+        // Lock mutex to safely update the shared dataset
+        hourlyAvgMutex.lock();
+        // Update hourly average dataset
+        if (hourlyAvg.find(current_hour) == hourlyAvg.end())
+        {
+            hourlyAvg[current_hour] = make_tuple(data.temperature, 1);
+        }
+        else
+        {
+            hourlyAvg[current_hour] = make_tuple(
+                get<0>(hourlyAvg[current_hour]) + data.temperature,
+                get<1>(hourlyAvg[current_hour]) + 1);
+        }
+        hourlyAvgMutex.unlock();
     }
     return NULL;
 }
@@ -151,10 +178,12 @@ void* TemperatureAnalysis::processSegment(void* args)
  * Generates a report of mean temperatures and standard deviations for each month.
  * @param reportName The name of the file where the report will be written.
  */
-void TemperatureAnalysis::generateReport(const std::string &reportName) {
-    std::ofstream reportFile(reportName.c_str());
-    if (!reportFile.is_open()) {
-        std::cerr << "Error opening report file!" << std::endl;
+void TemperatureAnalysis::generateReport(const string &reportName)
+{
+    ofstream reportFile(reportName.c_str());
+    if (!reportFile.is_open())
+    {
+        cerr << "Error opening report file!" << endl;
         return;
     }
 
@@ -167,24 +196,28 @@ void TemperatureAnalysis::generateReport(const std::string &reportName) {
     ReportArgs coolingArgs[coolingMonths.size()];
 
     // Create heating threads
-    for (size_t i = 0; i < heatingMonths.size(); ++i) {
+    for (size_t i = 0; i < heatingMonths.size(); ++i)
+    {
         heatingArgs[i] = {this, heatingMonths[i], &reportFile};
-        pthread_create(&heatingThreads[i], NULL, processHeatingMonth, (void*)&heatingArgs[i]);
+        pthread_create(&heatingThreads[i], NULL, processHeatingMonth, (void *)&heatingArgs[i]);
     }
 
     // Create cooling threads
-    for (size_t i = 0; i < coolingMonths.size(); ++i) {
+    for (size_t i = 0; i < coolingMonths.size(); ++i)
+    {
         coolingArgs[i] = {this, coolingMonths[i], &reportFile};
-        pthread_create(&coolingThreads[i], NULL, processCoolingMonth, (void*)&coolingArgs[i]);
+        pthread_create(&coolingThreads[i], NULL, processCoolingMonth, (void *)&coolingArgs[i]);
     }
 
     // Join heating threads
-    for (size_t i = 0; i < heatingMonths.size(); ++i) {
+    for (size_t i = 0; i < heatingMonths.size(); ++i)
+    {
         pthread_join(heatingThreads[i], NULL);
     }
 
     // Join cooling threads
-    for (size_t i = 0; i < coolingMonths.size(); ++i) {
+    for (size_t i = 0; i < coolingMonths.size(); ++i)
+    {
         pthread_join(coolingThreads[i], NULL);
     }
 
@@ -192,7 +225,6 @@ void TemperatureAnalysis::generateReport(const std::string &reportName) {
     pthread_mutex_destroy(&reportMutex);
     reportFile.close();
 }
-
 
 /**
  * Parses string that is read in from the temperature log file. It stores the date, time,
@@ -212,7 +244,7 @@ TemperatureData TemperatureAnalysis::parseLine(const string &line)
     if (line.empty())
     {
         // Return an empty object for an empty line
-        return TemperatureData(INT_MAX, 0, 0, 0, 0, 0, 0.0); 
+        return TemperatureData(INT_MAX, 0, 0, 0, 0, 0, 0.0);
     }
 
     // store date into temporary fields
@@ -237,58 +269,58 @@ bool TemperatureAnalysis::isAnomaly(double currentTemp, double previousTemp)
     return abs(currentTemp - previousTemp) > 2.0;
 }
 
-void TemperatureAnalysis::setHeatingMonths(const vector<int>& months) {
+void TemperatureAnalysis::setHeatingMonths(const vector<int> &months)
+{
     heatingMonths = months;
 }
 
-void TemperatureAnalysis::setCoolingMonths(const vector<int>& months) {
+void TemperatureAnalysis::setCoolingMonths(const vector<int> &months)
+{
     coolingMonths = months;
 }
 
-
-void* TemperatureAnalysis::processHeatingMonth(void* args) {
-    ReportArgs* reportArgs = (ReportArgs*)args;
-    TemperatureAnalysis* analysis = reportArgs->analysis;
+// Process Cooling Month: Detect temperatures below 1 standard deviation (for cooling)
+void *TemperatureAnalysis::processCoolingMonth(void *args)
+{
+    ReportArgs *reportArgs = (ReportArgs *)args;
+    TemperatureAnalysis *analysis = reportArgs->analysis;
     int month = reportArgs->month;
-    std::ofstream& reportFile = *reportArgs->reportFile;
+    ofstream &reportFile = *reportArgs->reportFile;
 
-    double totalTemperature = 0.0;
-    int count = 0;
+    // Loop through each hour in hourlyAvg for the given month
+    for (const auto &hourEntry : analysis->hourlyAvg)
+    {
+        const hourlyData &hData = hourEntry.first;
+        if (hData.month == month)
+        {
+            double sumTemps = get<0>(hourEntry.second);
+            int countTemps = get<1>(hourEntry.second);
 
-    // Calculate mean temperature
-    for (const auto& entry : analysis->dataset) {
-        const hourlyData& hData = entry.first;
-        if (hData.month == month) {
-            totalTemperature += std::get<0>(entry.second);
-            count += std::get<1>(entry.second);
-        }
-    }
+            if (countTemps > 0)
+            {
+                // Calculate mean temperature
+                double mean = sumTemps / countTemps;
+                double variance = 0.0;
 
-    if (count > 0) {
-        double mean = totalTemperature / count;
-        double variance = 0.0;
+                // Calculate variance for the current hour
+                for (const auto &tempEntry : analysis->dataset[hData])
+                {
+                    variance += (tempEntry - mean) * (tempEntry - mean);
+                }
+                variance /= countTemps;
+                double stddev = sqrt(variance);
 
-        // Calculate variance
-        for (const auto& entry : analysis->dataset) {
-            const hourlyData& hData = entry.first;
-            if (hData.month == month) {
-                double temp = std::get<0>(entry.second) / std::get<1>(entry.second);
-                variance += (temp - mean) * (temp - mean);
-            }
-        }
-        variance /= count;
-        double stddev = std::sqrt(variance);
-
-        // Check for heating issues
-        for (const auto& entry : analysis->dataset) {
-            const hourlyData& hData = entry.first;
-            if (hData.month == month) {
-                double hourTemp = std::get<0>(entry.second) / std::get<1>(entry.second);
-                if (hourTemp > mean + stddev) {
-                    pthread_mutex_lock(&analysis->reportMutex); // Lock mutex
-                    reportFile << "Heating issue detected: " << month << "/" << hData.day << "/" << hData.year
-                               << " At Hour: " << hData.hour << " | Temp: " << hourTemp << std::endl;
-                    pthread_mutex_unlock(&analysis->reportMutex); // Unlock mutex
+                // Check for cooling issues: temp < (mean - stddev)
+                for (const auto &tempEntry : analysis->dataset[hData])
+                {
+                    if (tempEntry < (mean - stddev))
+                    {
+                        pthread_mutex_lock(&analysis->reportMutex); // Lock mutex
+                        reportFile << "Cooling issue detected: " << month << "/" << hData.day << "/" << hData.year
+                                   << " At Hour: " << hData.hour << " | Temp: " << tempEntry << endl;
+                        pthread_mutex_unlock(&analysis->reportMutex); // Unlock mutex
+                        break;                                        // Stop further checks for this hour if an issue is found
+                    }
                 }
             }
         }
@@ -297,49 +329,48 @@ void* TemperatureAnalysis::processHeatingMonth(void* args) {
     return nullptr;
 }
 
-void* TemperatureAnalysis::processCoolingMonth(void* args) {
-    ReportArgs* reportArgs = (ReportArgs*)args;
-    TemperatureAnalysis* analysis = reportArgs->analysis;
+// Process Heating Month: Detect temperatures above 1 standard deviation (for heating)
+void *TemperatureAnalysis::processHeatingMonth(void *args)
+{
+    ReportArgs *reportArgs = (ReportArgs *)args;
+    TemperatureAnalysis *analysis = reportArgs->analysis;
     int month = reportArgs->month;
-    std::ofstream& reportFile = *reportArgs->reportFile;
+    ofstream &reportFile = *reportArgs->reportFile;
 
-    double totalTemperature = 0.0;
-    int count = 0;
+    // Loop through each hour in hourlyAvg for the given month
+    for (const auto &hourEntry : analysis->hourlyAvg)
+    {
+        const hourlyData &hData = hourEntry.first;
+        if (hData.month == month)
+        {
+            double sumTemps = get<0>(hourEntry.second);
+            int countTemps = get<1>(hourEntry.second);
 
-    // Calculate mean temperature
-    for (const auto& entry : analysis->dataset) {
-        const hourlyData& hData = entry.first;
-        if (hData.month == month) {
-            totalTemperature += std::get<0>(entry.second);
-            count += std::get<1>(entry.second);
-        }
-    }
+            if (countTemps > 0)
+            {
+                // Calculate mean temperature
+                double mean = sumTemps / countTemps;
+                double variance = 0.0;
 
-    if (count > 0) {
-        double mean = totalTemperature / count;
-        double variance = 0.0;
+                // Calculate variance for the current hour
+                for (const auto &tempEntry : analysis->dataset[hData])
+                {
+                    variance += (tempEntry - mean) * (tempEntry - mean);
+                }
+                variance /= countTemps;
+                double stddev = sqrt(variance);
 
-        // Calculate variance
-        for (const auto& entry : analysis->dataset) {
-            const hourlyData& hData = entry.first;
-            if (hData.month == month) {
-                double temp = std::get<0>(entry.second) / std::get<1>(entry.second);
-                variance += (temp - mean) * (temp - mean);
-            }
-        }
-        variance /= count;
-        double stddev = std::sqrt(variance);
-
-        // Check for cooling issues
-        for (const auto& entry : analysis->dataset) {
-            const hourlyData& hData = entry.first;
-            if (hData.month == month) {
-                double hourTemp = std::get<0>(entry.second) / std::get<1>(entry.second);
-                if (hourTemp < mean - stddev) {
-                    pthread_mutex_lock(&analysis->reportMutex); // Lock mutex
-                    reportFile << "Cooling issue detected: " << month << "/" << hData.day << "/" << hData.year
-                               << " At Hour: " << hData.hour << " | Temp: " << hourTemp << std::endl;
-                    pthread_mutex_unlock(&analysis->reportMutex); // Unlock mutex
+                // Check for heating issues: temp > (mean + stddev)
+                for (const auto &tempEntry : analysis->dataset[hData])
+                {
+                    if (tempEntry > (mean + stddev))
+                    {
+                        pthread_mutex_lock(&analysis->reportMutex); // Lock mutex
+                        reportFile << "Heating issue detected: " << month << "/" << hData.day << "/" << hData.year
+                                   << " At Hour: " << hData.hour << " | Temp: " << tempEntry << endl;
+                        pthread_mutex_unlock(&analysis->reportMutex); // Unlock mutex
+                        break;                                        // Stop further checks for this hour if an issue is found
+                    }
                 }
             }
         }

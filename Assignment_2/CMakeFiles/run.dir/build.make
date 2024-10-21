@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/HPC/Assignment_2
+CMAKE_SOURCE_DIR = /home/asher/HPC/Assignment_2
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/HPC/Assignment_2
+CMAKE_BINARY_DIR = /home/asher/HPC/Assignment_2
 
 # Include any dependencies generated for this target.
 include CMakeFiles/run.dir/depend.make
@@ -72,30 +72,30 @@ include CMakeFiles/run.dir/flags.make
 CMakeFiles/run.dir/main.cpp.o: CMakeFiles/run.dir/flags.make
 CMakeFiles/run.dir/main.cpp.o: main.cpp
 CMakeFiles/run.dir/main.cpp.o: CMakeFiles/run.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/HPC/Assignment_2/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/run.dir/main.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/run.dir/main.cpp.o -MF CMakeFiles/run.dir/main.cpp.o.d -o CMakeFiles/run.dir/main.cpp.o -c /home/HPC/Assignment_2/main.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/asher/HPC/Assignment_2/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/run.dir/main.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/run.dir/main.cpp.o -MF CMakeFiles/run.dir/main.cpp.o.d -o CMakeFiles/run.dir/main.cpp.o -c /home/asher/HPC/Assignment_2/main.cpp
 
 CMakeFiles/run.dir/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/run.dir/main.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/HPC/Assignment_2/main.cpp > CMakeFiles/run.dir/main.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/asher/HPC/Assignment_2/main.cpp > CMakeFiles/run.dir/main.cpp.i
 
 CMakeFiles/run.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/run.dir/main.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/HPC/Assignment_2/main.cpp -o CMakeFiles/run.dir/main.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/asher/HPC/Assignment_2/main.cpp -o CMakeFiles/run.dir/main.cpp.s
 
 CMakeFiles/run.dir/TemperatureAnalysis.cpp.o: CMakeFiles/run.dir/flags.make
 CMakeFiles/run.dir/TemperatureAnalysis.cpp.o: TemperatureAnalysis.cpp
 CMakeFiles/run.dir/TemperatureAnalysis.cpp.o: CMakeFiles/run.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/HPC/Assignment_2/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/run.dir/TemperatureAnalysis.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/run.dir/TemperatureAnalysis.cpp.o -MF CMakeFiles/run.dir/TemperatureAnalysis.cpp.o.d -o CMakeFiles/run.dir/TemperatureAnalysis.cpp.o -c /home/HPC/Assignment_2/TemperatureAnalysis.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/asher/HPC/Assignment_2/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/run.dir/TemperatureAnalysis.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/run.dir/TemperatureAnalysis.cpp.o -MF CMakeFiles/run.dir/TemperatureAnalysis.cpp.o.d -o CMakeFiles/run.dir/TemperatureAnalysis.cpp.o -c /home/asher/HPC/Assignment_2/TemperatureAnalysis.cpp
 
 CMakeFiles/run.dir/TemperatureAnalysis.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/run.dir/TemperatureAnalysis.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/HPC/Assignment_2/TemperatureAnalysis.cpp > CMakeFiles/run.dir/TemperatureAnalysis.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/asher/HPC/Assignment_2/TemperatureAnalysis.cpp > CMakeFiles/run.dir/TemperatureAnalysis.cpp.i
 
 CMakeFiles/run.dir/TemperatureAnalysis.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/run.dir/TemperatureAnalysis.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/HPC/Assignment_2/TemperatureAnalysis.cpp -o CMakeFiles/run.dir/TemperatureAnalysis.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/asher/HPC/Assignment_2/TemperatureAnalysis.cpp -o CMakeFiles/run.dir/TemperatureAnalysis.cpp.s
 
 # Object files for target run
 run_OBJECTS = \
@@ -109,7 +109,7 @@ build/run: CMakeFiles/run.dir/main.cpp.o
 build/run: CMakeFiles/run.dir/TemperatureAnalysis.cpp.o
 build/run: CMakeFiles/run.dir/build.make
 build/run: CMakeFiles/run.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/HPC/Assignment_2/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable build/run"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/asher/HPC/Assignment_2/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable build/run"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/run.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -121,6 +121,6 @@ CMakeFiles/run.dir/clean:
 .PHONY : CMakeFiles/run.dir/clean
 
 CMakeFiles/run.dir/depend:
-	cd /home/HPC/Assignment_2 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/HPC/Assignment_2 /home/HPC/Assignment_2 /home/HPC/Assignment_2 /home/HPC/Assignment_2 /home/HPC/Assignment_2/CMakeFiles/run.dir/DependInfo.cmake "--color=$(COLOR)"
+	cd /home/asher/HPC/Assignment_2 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/asher/HPC/Assignment_2 /home/asher/HPC/Assignment_2 /home/asher/HPC/Assignment_2 /home/asher/HPC/Assignment_2 /home/asher/HPC/Assignment_2/CMakeFiles/run.dir/DependInfo.cmake "--color=$(COLOR)"
 .PHONY : CMakeFiles/run.dir/depend
 
