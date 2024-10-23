@@ -75,6 +75,12 @@ public:
      * Processes temperature data from a log file in parallel using multiple threads.
      * Each thread handles a segment of the file, parsing temperature records and
      * updating the shared dataset with average temperature values for each hour.
+     *
+     * **Partitioning**: The data is divided into segments based on file size, 
+     * and each thread processes its own segment.
+     * 
+     * **Load Balancing**: File size is divided evenly among threads by assigning 
+     * an equal number of bytes to each thread's segment.
      */
     void processTemperatureData(void);
 
@@ -118,12 +124,13 @@ private:
 
     /**
      * Processes a segment of the temperature data from the input file.
-     * This method is intended to be executed by a thread and reads from the
-     * specified start and end positions of the file. It parses each line of
-     * data, updates the shared dataset, and ensures thread safety using a mutex.
+     * 
+     * **Partitioning**: Each thread works on its own segment of the file, 
+     * with clear start and end positions to avoid overlap.
      *
-     * @param args Pointer to ThreadArgs struct containing the start and end 
-     *             positions for processing, as well as the thread's ID.
+     * **Coordination**: Mutexes are used to control access to shared data structures (dataset and hourlyAvg).
+     * 
+     * @param args Pointer to ThreadArgs struct containing the start and end positions for processing.
      * @return NULL
      */
     void* processSegment(void* args);
@@ -136,8 +143,30 @@ private:
      */
     static void* threadFunction(void* args);
 
+    /**
+     * Process Heating Month: Detect temperatures above 1 standard deviation (for heating).
+     * 
+     * Partitioning: Threads are created to process data for one heating month each.
+     * 
+     * Load Balancing: Each month’s data is processed independently in its own thread, balancing the workload.
+     * 
+     * Communication: Access to shared data (hourlyAvg, dataset, and report file) requires locking for consistency.
+     * 
+     * Coordination: Mutexes are used to synchronize access to shared data during report writing.
+     */
     static void* processHeatingMonth(void* args);
 
+    /**
+    * Process Cooling Month: Detect temperatures below 1 standard deviation (for cooling).
+    * 
+    * Partitioning: Each thread processes data for one cooling month, which is an independent unit of work.
+    * 
+    * Load Balancing: Each month has its own thread, balancing work across months.
+    * 
+    * Communication: Threads access shared data (e.g., `hourlyAvg` and `dataset`), requiring careful access with locks.
+    * 
+    * Coordination: Mutexes ensure thread-safe reporting, allowing threads to safely write to the report file.
+    */
     static void* processCoolingMonth(void* args);
 
 

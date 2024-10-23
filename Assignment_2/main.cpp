@@ -21,8 +21,8 @@ int main() {
     gettimeofday(&start, NULL); // Start timer
 
     TemperatureAnalysis analysis(filename);
-    analysis.setHeatingMonths({1, 2, 3, 10, 11, 12}); 
-    analysis.setCoolingMonths({6, 7, 8}); 
+    analysis.setHeatingMonths({1}); 
+    analysis.setCoolingMonths({2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}); 
     
     gettimeofday(&end, NULL); // Stop timer
     int micro_start = start.tv_sec * 1000000 + start.tv_usec;

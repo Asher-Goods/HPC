@@ -54,12 +54,19 @@ void TemperatureAnalysis::initializeFile(const string &filename)
  * Processes temperature data from a log file in parallel using multiple threads.
  * Each thread handles a segment of the file, parsing temperature records and
  * updating the shared dataset with average temperature values for each hour.
+ *
+ * **Partitioning**: The data is divided into segments based on file size, 
+ * and each thread processes its own segment.
+ * 
+ * **Load Balancing**: File size is divided evenly among threads by assigning 
+ * an equal number of bytes to each thread's segment.
  */
 void TemperatureAnalysis::processTemperatureData(void)
 {
     pthread_t threads[numThreads];
     ThreadArgs *threadArgs[numThreads]; // Declare an array of ThreadArgs pointers
 
+    // **Scheduling**: Threads are created to process their file segments concurrently.
     // Create threads to process the file
     for (int i = 0; i < numThreads; ++i)
     {
@@ -79,7 +86,8 @@ void TemperatureAnalysis::processTemperatureData(void)
         }
     }
 
-    // Join threads
+    // **Coordination**: Threads must be joined to ensure that all processing is completed 
+    // before moving on to the next step.
     for (int i = 0; i < numThreads; ++i)
     {
         pthread_join(threads[i], NULL);
@@ -103,6 +111,12 @@ void *TemperatureAnalysis::threadFunction(void *args)
 
 /**
  * Processes a segment of the temperature data from the input file.
+ * 
+ * **Partitioning**: Each thread works on its own segment of the file, 
+ * with clear start and end positions to avoid overlap.
+ *
+ * **Coordination**: Mutexes are used to control access to shared data structures (dataset and hourlyAvg).
+ * 
  * @param args Pointer to ThreadArgs struct containing the start and end positions for processing.
  * @return NULL
  */
@@ -140,6 +154,8 @@ void *TemperatureAnalysis::processSegment(void *args)
 
         hourlyData current_hour(data.year, data.month, data.day, data.hour);
 
+        // **Communication**: Threads update shared structures like 'dataset' and 'hourlyAvg', 
+        // necessitating careful management of access via mutexes.
         // populate the dataset by hour
         datasetMutex.lock();
         if (dataset.find(current_hour) != dataset.end() && !dataset[current_hour].empty()) {
@@ -155,6 +171,7 @@ void *TemperatureAnalysis::processSegment(void *args)
             dataset[current_hour].push_back(data.temperature);
         }
         datasetMutex.unlock();
+
 
         // Lock mutex to safely update the shared dataset
         hourlyAvgMutex.lock();
@@ -176,7 +193,16 @@ void *TemperatureAnalysis::processSegment(void *args)
 
 /**
  * Generates a report of mean temperatures and standard deviations for each month.
- * @param reportName The name of the file where the report will be written.
+ * 
+ * Partitioning: Each thread handles a full month's data, ensuring that the workload is divided across months.
+ * 
+ * Load Balancing: The workload is naturally balanced, assuming the number of data points per month is roughly equivalent.
+ * 
+ * Scheduling: Threads are created for each month, with each thread being responsible for either a heating or cooling month.
+ * 
+ * Communication: Shared data structures like the report file and temperature dataset require controlled access to prevent conflicts.
+ * 
+ * Coordination: The threads must be joined before finalizing the report to ensure all data is written before the file is closed.
  */
 void TemperatureAnalysis::generateReport(const string &reportName)
 {
@@ -190,6 +216,7 @@ void TemperatureAnalysis::generateReport(const string &reportName)
     // Initialize mutex
     pthread_mutex_init(&reportMutex, NULL);
 
+    // Scheduling: Threads are created based on the number of months that need to be processed
     pthread_t heatingThreads[heatingMonths.size()];
     pthread_t coolingThreads[coolingMonths.size()];
     ReportArgs heatingArgs[heatingMonths.size()];
@@ -209,6 +236,7 @@ void TemperatureAnalysis::generateReport(const string &reportName)
         pthread_create(&coolingThreads[i], NULL, processCoolingMonth, (void *)&coolingArgs[i]);
     }
 
+    // Coordination: All threads are joined to ensure that processing finishes before the program continues
     // Join heating threads
     for (size_t i = 0; i < heatingMonths.size(); ++i)
     {
@@ -279,7 +307,17 @@ void TemperatureAnalysis::setCoolingMonths(const vector<int> &months)
     coolingMonths = months;
 }
 
-// Process Cooling Month: Detect temperatures below 1 standard deviation (for cooling)
+/**
+ * Process Cooling Month: Detect temperatures below 1 standard deviation (for cooling).
+ * 
+ * Partitioning: Each thread processes data for one cooling month, which is an independent unit of work.
+ * 
+ * Load Balancing: Each month has its own thread, balancing work across months.
+ * 
+ * Communication: Threads access shared data (e.g., `hourlyAvg` and `dataset`), requiring careful access with locks.
+ * 
+ * Coordination: Mutexes ensure thread-safe reporting, allowing threads to safely write to the report file.
+ */
 void *TemperatureAnalysis::processCoolingMonth(void *args)
 {
     ReportArgs *reportArgs = (ReportArgs *)args;
@@ -329,7 +367,17 @@ void *TemperatureAnalysis::processCoolingMonth(void *args)
     return nullptr;
 }
 
-// Process Heating Month: Detect temperatures above 1 standard deviation (for heating)
+/**
+ * Process Heating Month: Detect temperatures above 1 standard deviation (for heating).
+ * 
+ * Partitioning: Threads are created to process data for one heating month each.
+ * 
+ * Load Balancing: Each month’s data is processed independently in its own thread, balancing the workload.
+ * 
+ * Communication: Access to shared data (hourlyAvg, dataset, and report file) requires locking for consistency.
+ * 
+ * Coordination: Mutexes are used to facilitate access to shared data during report writing.
+ */
 void *TemperatureAnalysis::processHeatingMonth(void *args)
 {
     ReportArgs *reportArgs = (ReportArgs *)args;
