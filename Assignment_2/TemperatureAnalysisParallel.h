@@ -3,10 +3,6 @@
 
 #include <condition_variable>
 #include <cmath>
-#include <iomanip>
-#include <numeric>
-#include <tuple>
-#include <functional>
 #include <algorithm>
 #include <fstream>
 #include <future>
@@ -22,7 +18,8 @@
 
 using namespace std;
 
-struct TemperatureData {
+struct TemperatureData
+{
     int month, day, year, hour, minute, second;
     double temperature;
     bool isValid; // Indicates if the data is valid
@@ -33,7 +30,8 @@ struct TemperatureData {
     TemperatureData() : month(0), day(0), year(0), hour(0), minute(0), second(0), temperature(0), isValid(false) {} // Default constructor for sentinel
 };
 
-struct TemperatureDataOut {
+struct TemperatureDataOut
+{
     int month;
     int day;
     int year;
@@ -41,8 +39,8 @@ struct TemperatureDataOut {
     int minute;
     int second;
     double temperature;
-    double mean;      
-    double stddev;    
+    double mean;
+    double stddev;
 
     // Regular constructor
     TemperatureDataOut(int m, int d, int y, int h, int mi, int s, double temp, double meanVal = 0.0, double stddevVal = 0.0)
@@ -54,8 +52,8 @@ struct TemperatureDataOut {
           temperature(0.0), mean(0.0), stddev(0.0) {}
 };
 
-
-struct Hour {
+struct Hour
+{
     int day;
     int hour;
 
@@ -63,25 +61,28 @@ struct Hour {
     Hour(int d, int h) : day(d), hour(h) {}
 
     // Define equality operator for unordered_map comparisons
-    bool operator==(const Hour& other) const {
+    bool operator==(const Hour &other) const
+    {
         return (day == other.day && hour == other.hour);
     }
 };
 
 // Define a hash specialization for Hour
-namespace std {
+namespace std
+{
     template <>
-    struct hash<Hour> {
-        std::size_t operator()(const Hour& h) const {
+    struct hash<Hour>
+    {
+        std::size_t operator()(const Hour &h) const
+        {
             // Combine the hashes of 'day' and 'hour' uniquely
             return std::hash<int>()(h.day) ^ (std::hash<int>()(h.hour) << 1);
         }
     };
 }
 
-
-
-struct Month {
+struct Month
+{
     int year;
     int month;
 
@@ -89,53 +90,28 @@ struct Month {
     Month(int year = 0, int month = 0) : year(year), month(month) {}
 
     // Define equality operator
-    bool operator==(const Month& other) const {
+    bool operator==(const Month &other) const
+    {
         return (year == other.year && month == other.month);
     }
 };
 
-
-
 // Hash function for Month
-namespace std {
+namespace std
+{
     template <>
-    struct hash<Month> {
-        size_t operator()(const Month& month) const {
+    struct hash<Month>
+    {
+        size_t operator()(const Month &month) const
+        {
             return hash<int>()(month.year) ^ (hash<int>()(month.month) << 1);
         }
     };
 }
 
-
-struct TimeKey {
-    int year;
-    int month;
-    int day;   // Not used for the hash
-    int hour;  // Not used for the hash
-
-    // Default constructor
-    TimeKey() : year(0), month(0), day(0), hour(0) {}
-
-    // Constructor with parameters
-    TimeKey(int y, int m, int d, int h) : year(y), month(m), day(d), hour(h) {}
-
-    // Equality operator
-    bool operator==(const TimeKey& other) const {
-        return year == other.year && month == other.month;
-    }
-};
-
-// Custom hash function for TimeKey
-struct TimeKeyHash {
-    std::size_t operator()(const TimeKey& key) const {
-        // Combine year and month for the hash value
-        return std::hash<int>()(key.year) ^ (std::hash<int>()(key.month) << 1);
-    }
-};
-
-
 // Class to perform temperature analysis in a task-parallel pipeline
-class TemperatureAnalysisParallel {
+class TemperatureAnalysisParallel
+{
 public:
     TemperatureAnalysisParallel(const string &filename);
     void setHeatingMonths(const vector<int> &months);
@@ -156,8 +132,6 @@ private:
     ifstream inputFile;
     vector<int> heatingMonths, coolingMonths;
 
-    TemperatureData data;
-
     // Stage functions to handle each part of the pipeline
     void fileReader();
     void parser();
@@ -167,22 +141,11 @@ private:
     // Helper functions
     TemperatureData parseLine(const string &line);
     bool isAnomaly(double currentTemp, double previousTemp);
-    double calculateMean(const std::unordered_map<Hour, std::vector<double>>& temperatures);
-    double calculateStdDev(const std::unordered_map<Hour, std::vector<double>>& temperatures, double mean);
-    void evaluateMonthlyTemperatures(Month month, const std::unordered_map<Hour, std::vector<double>>& temperatures);
+    double calculateMean(const std::unordered_map<Hour, std::vector<double>> &temperatures);
+    double calculateStdDev(const std::unordered_map<Hour, std::vector<double>> &temperatures, double mean);
+    void evaluateMonthlyTemperatures(Month month, const std::unordered_map<Hour, std::vector<double>> &temperatures);
     bool isCoolingMonth(int month);
     bool isHeatingMonth(int month);
-
-
-    // contains temperature entries within the hour
-    vector<double> hourlyData;
-    
-
-    // contains temperature entries within the month, sorted by hourly bucket 
-    unordered_map <Hour, vector<double>> dailyData;
-    // integer refers to which hour and day within the month
-    
-
 };
 
 #endif // TEMPERATURE_ANALYSIS_PARALLEL_H
