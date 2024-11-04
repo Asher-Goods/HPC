@@ -44,28 +44,68 @@ struct TemperatureDataOut {
     double mean;      
     double stddev;    
 
+    // Regular constructor
     TemperatureDataOut(int m, int d, int y, int h, int mi, int s, double temp, double meanVal = 0.0, double stddevVal = 0.0)
         : month(m), day(d), year(y), hour(h), minute(mi), second(s), temperature(temp), mean(meanVal), stddev(stddevVal) {}
+
+    // Sentinel constructor
+    TemperatureDataOut()
+        : month(0), day(0), year(0), hour(0), minute(0), second(0),
+          temperature(0.0), mean(0.0), stddev(0.0) {}
 };
+
 
 struct Hour {
     int day;
     int hour;
-    
+
+    // Constructor
     Hour(int d, int h) : day(d), hour(h) {}
 
-    // Overload the equality operator
+    // Define equality operator for unordered_map comparisons
     bool operator==(const Hour& other) const {
-        return day == other.day && hour == other.hour;
+        return (day == other.day && hour == other.hour);
     }
 };
 
-// Define a hash function for Hour
-struct HourHash {
-    std::size_t operator()(const Hour& h) const {
-        return std::hash<int>()(h.day) ^ (std::hash<int>()(h.hour) << 1); // Combine hashes of day and hour
+// Define a hash specialization for Hour
+namespace std {
+    template <>
+    struct hash<Hour> {
+        std::size_t operator()(const Hour& h) const {
+            // Combine the hashes of 'day' and 'hour' uniquely
+            return std::hash<int>()(h.day) ^ (std::hash<int>()(h.hour) << 1);
+        }
+    };
+}
+
+
+
+struct Month {
+    int year;
+    int month;
+
+    // Constructor that initializes year and month
+    Month(int year = 0, int month = 0) : year(year), month(month) {}
+
+    // Define equality operator
+    bool operator==(const Month& other) const {
+        return (year == other.year && month == other.month);
     }
 };
+
+
+
+// Hash function for Month
+namespace std {
+    template <>
+    struct hash<Month> {
+        size_t operator()(const Month& month) const {
+            return hash<int>()(month.year) ^ (hash<int>()(month.month) << 1);
+        }
+    };
+}
+
 
 struct TimeKey {
     int year;
@@ -127,11 +167,22 @@ private:
     // Helper functions
     TemperatureData parseLine(const string &line);
     bool isAnomaly(double currentTemp, double previousTemp);
-    double calculateMean(const unordered_map<Hour, vector<double>, HourHash>& temperatures);
-    double calculateStdDev(const unordered_map<Hour, vector<double>, HourHash>& temperatures, double mean);
-    void evaluateMonthlyTemperatures(const TimeKey& key, const unordered_map<Hour, vector<double>, HourHash> temperatures);
+    double calculateMean(const std::unordered_map<Hour, std::vector<double>>& temperatures);
+    double calculateStdDev(const std::unordered_map<Hour, std::vector<double>>& temperatures, double mean);
+    void evaluateMonthlyTemperatures(Month month, const std::unordered_map<Hour, std::vector<double>>& temperatures);
     bool isCoolingMonth(int month);
     bool isHeatingMonth(int month);
+
+
+    // contains temperature entries within the hour
+    vector<double> hourlyData;
+    
+
+    // contains temperature entries within the month, sorted by hourly bucket 
+    unordered_map <Hour, vector<double>> dailyData;
+    // integer refers to which hour and day within the month
+    
+
 };
 
 #endif // TEMPERATURE_ANALYSIS_PARALLEL_H
