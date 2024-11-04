@@ -19,6 +19,7 @@ void TemperatureAnalysisParallel::startPipeline(const string &outputFile) {
     thread processorThread(&TemperatureAnalysisParallel::anomalyDetector, this);
     thread writerThread(&TemperatureAnalysisParallel::fileWriter, this, outputFile);
 
+    // Join all threads to ensure they finish before exiting
     readerThread.join();
     parserThread.join();
     processorThread.join();
@@ -33,38 +34,58 @@ void TemperatureAnalysisParallel::fileReader() {
         readQueue.push(line);
         readCond.notify_one();
     }
+    {
+        unique_lock<mutex> lock(readMutex);
+        readQueue.push("-1"); // An empty string as a sentinel value for ending
+        readCond.notify_one();
+        printf("finished reading... (STEP 1)\n");
+    }
     inputFile.close();
+    
 }
 
+// Stage 2: Parses each line into TemperatureData and pushes to parseQueue
 // Stage 2: Parses each line into TemperatureData and pushes to parseQueue
 void TemperatureAnalysisParallel::parser() {
     while (true) {
         unique_lock<mutex> lock(readMutex);
         readCond.wait(lock, [this] { return !readQueue.empty(); });
 
+        // Check for sentinel value before processing
+        if (readQueue.empty()) {
+            // If the queue is empty after wait, continue to check for sentinel
+            continue;
+        }
+
         auto line = readQueue.front();
         readQueue.pop();
 
         lock.unlock();
 
+        // check for sentinel after finished reading file
+        if (line == "-1") {
+            break;
+        }
+
         TemperatureData data = parseLine(line);
-        if(data.month == INT_MAX) {
-            continue;
+        if (data.month == INT_MAX) {
+            continue; // Invalid month, skip this line
         }
 
         unique_lock<mutex> parseLock(parseMutex);
         parseQueue.push(data);
         parseCond.notify_one();
+        
     }
 
-    // Push sentinel value to indicate completion
-
-    unique_lock<mutex> lock(parseMutex);
-    parseQueue.push(TemperatureData()); // Push an invalid TemperatureData as sentinel
-    parseCond.notify_one();
+    // After breaking out of the loop, push sentinel value to indicate completion
+    {
+        unique_lock<mutex> lock(parseMutex);
+        parseQueue.push(TemperatureData()); // Push an invalid TemperatureData as sentinel
+        parseCond.notify_one();
+    }
     
-    printf("ALL DONE PARSEQUEUE METHOD\n");
-    
+    printf("ALL DONE PARSE QUEUE METHOD (STEP 2)\n");
 }
 
 
@@ -83,6 +104,11 @@ void TemperatureAnalysisParallel::anomalyDetector() {
         auto data = parseQueue.front();
         parseQueue.pop();
         lock.unlock();
+
+        // Check for sentinel value to terminate processing
+        if (data.month == 0 && data.day == 0 && data.year == 0) { // Sentinel detected
+            break; // Exit the loop if sentinel is found
+        }
 
         // Create Month and Hour keys for the current data
         Month monthKey(data.year, data.month);
@@ -122,18 +148,17 @@ void TemperatureAnalysisParallel::anomalyDetector() {
             t.join();
         }
     }
+    
+    // Push sentinel value to indicate completion of processing
     unique_lock<mutex> lock(processMutex);
     processQueue.push(TemperatureDataOut()); // Push an invalid TemperatureDataOut as sentinel
     processCond.notify_all();
-    printf("ALL DONE ANOMALY DETECT METHOD\n");
+    
+    printf("ALL DONE ANOMALY DETECT METHOD (STEP 3)\n");
 }
-
-
-
 
 // Function to calculate mean and standard deviation and evaluate temperatures
 void TemperatureAnalysisParallel::evaluateMonthlyTemperatures(Month month, const std::unordered_map<Hour, std::vector<double>>& temperatures) {
-    
     // Check if there are any temperatures to evaluate
     if (temperatures.empty()) {
         return; // No data to process
@@ -143,12 +168,12 @@ void TemperatureAnalysisParallel::evaluateMonthlyTemperatures(Month month, const
     double mean = calculateMean(temperatures);
     double stddev = calculateStdDev(temperatures, mean);
     
-    printf("Month: %d Mean: %f, stdev: %f, count: %d\n", month.month, mean, stddev, temperatures.size());
+    // printf("Month: %d Mean: %f, stdev: %f, count: %d\n", month.month, mean, stddev, temperatures.size());
 
     // Process temperatures for heating/cooling issues
     for (const auto& hourEntry : temperatures) {
         const Hour& hourKey = hourEntry.first; // Extract hour key
-        int currentHour = hourKey.hour;         // Access the hour
+        int currentHour = hourKey.hour;         // Access th e hour
         
         // Assuming you have a way to determine the current day from the context where you use Hour
         int currentDay = hourKey.day; // Extract day (assuming Hour has a day field)
@@ -167,7 +192,6 @@ void TemperatureAnalysisParallel::evaluateMonthlyTemperatures(Month month, const
     }
 }
 
-
 // Stage 4: Writes results to the output file
 void TemperatureAnalysisParallel::fileWriter(const string &outputFile) {
     ofstream outFile(outputFile);
@@ -181,7 +205,6 @@ void TemperatureAnalysisParallel::fileWriter(const string &outputFile) {
 
         // Check for sentinel value to terminate
         if (result.month == 0 && result.day == 0 && result.year == 0) { // Adjust if needed
-            printf("Sentinel found, terminating fileWriter...\n");
             break; // Exit the loop if sentinel is found
         }
 
@@ -197,31 +220,23 @@ void TemperatureAnalysisParallel::fileWriter(const string &outputFile) {
                     << " At Hour: " << result.hour << " | Temp: " << result.temperature 
                     << " | Mean: " << result.mean << " | Stddev: " << result.stddev << endl;
         }
-        else {
-            printf("not detecting properly...\n");
-        }
 
         // Flush the output to ensure it's written immediately
         outFile.flush();
     }
+    printf("ALL DONE FILE WRITE METHOD (STEP 4)\n");
     outFile.close();
 }
 
-
-
-
-
 // Helper function to parse a line of data
-TemperatureData TemperatureAnalysisParallel::parseLine(const string &line)
-{
+TemperatureData TemperatureAnalysisParallel::parseLine(const string &line) {
     stringstream ss(line);
     char delim{};
 
     int month, day, year, hour, minute, second;
     float temperature;
 
-    if (line.empty())
-    {
+    if (line.empty()) {
         // Return an empty object for an empty line
         return TemperatureData(INT_MAX, 0, 0, 0, 0, 0, 0.0);
     }
@@ -238,49 +253,45 @@ TemperatureData TemperatureAnalysisParallel::parseLine(const string &line)
 
 // Helper function to detect anomalies based on temperature
 bool TemperatureAnalysisParallel::isAnomaly(double currentTemp, double previousTemp) {
-    return abs(currentTemp - previousTemp) > 2.0;
+    return abs(currentTemp - previousTemp) > 2.0; // Example anomaly threshold
 }
 
 // Helper function to calculate mean
 double TemperatureAnalysisParallel::calculateMean(const std::unordered_map<Hour, std::vector<double>>& temperatures) {
-    double totalSum = 0.0;
-    int totalCount = 0;
+    double sum = 0.0;
+    int count = 0;
 
     for (const auto& entry : temperatures) {
-        const vector<double>& tempData = entry.second;
-        totalCount += tempData.size();
-        for (double temp : tempData) {
-            totalSum += temp;
+        for (double temp : entry.second) {
+            sum += temp;
+            count++;
         }
     }
 
-    return totalCount > 0 ? totalSum / totalCount : 0.0; // Return 0 if no temperatures
+    return count > 0 ? sum / count : 0.0;
 }
-
 
 // Helper function to calculate standard deviation
 double TemperatureAnalysisParallel::calculateStdDev(const std::unordered_map<Hour, std::vector<double>>& temperatures, double mean) {
-    double sumSquaredDiffs = 0.0;
-    int totalCount = 0;
+    double sum = 0.0;
+    int count = 0;
 
     for (const auto& entry : temperatures) {
-        const vector<double>& tempData = entry.second;
-        totalCount += tempData.size();
-        for (double temp : tempData) {
-            sumSquaredDiffs += (temp - mean) * (temp - mean);
+        for (double temp : entry.second) {
+            sum += (temp - mean) * (temp - mean);
+            count++;
         }
     }
 
-    return totalCount > 1 ? sqrt(sumSquaredDiffs / (totalCount - 1)) : 0.0; // Return 0 if no valid stddev can be calculated
+    return count > 1 ? sqrt(sum / (count - 1)) : 0.0; // Sample stddev calculation
 }
 
-
-// Check if a month is a heating month
+// Helper function to check if the month is a heating month
 bool TemperatureAnalysisParallel::isHeatingMonth(int month) {
     return find(heatingMonths.begin(), heatingMonths.end(), month) != heatingMonths.end();
 }
 
-// Check if a month is a cooling month
+// Helper function to check if the month is a cooling month
 bool TemperatureAnalysisParallel::isCoolingMonth(int month) {
     return find(coolingMonths.begin(), coolingMonths.end(), month) != coolingMonths.end();
 }
