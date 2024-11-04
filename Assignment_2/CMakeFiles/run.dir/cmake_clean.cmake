@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/run.dir/TemperatureAnalysis.cpp.o"
-  "CMakeFiles/run.dir/TemperatureAnalysis.cpp.o.d"
+  "CMakeFiles/run.dir/TemperatureAnalysisParallel.cpp.o"
+  "CMakeFiles/run.dir/TemperatureAnalysisParallel.cpp.o.d"
   "CMakeFiles/run.dir/main.cpp.o"
   "CMakeFiles/run.dir/main.cpp.o.d"
   "build/run"

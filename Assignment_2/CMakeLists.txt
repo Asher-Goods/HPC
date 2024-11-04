@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Add executable target
-add_executable(run main.cpp TemperatureAnalysis.cpp)
+add_executable(run main.cpp TemperatureAnalysisParallel.cpp)
 
 # Optionally specify the output directory for the executable
 set_target_properties(run PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build)

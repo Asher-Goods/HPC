@@ -57,10 +57,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/asher/HPC/Assignment_2
+CMAKE_SOURCE_DIR = /home/HPC/Assignment_2
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/asher/HPC/Assignment_2
+CMAKE_BINARY_DIR = /home/HPC/Assignment_2
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/asher/HPC/Assignment_2/CMakeFiles /home/asher/HPC/Assignment_2//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/HPC/Assignment_2/CMakeFiles /home/HPC/Assignment_2//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/asher/HPC/Assignment_2/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/HPC/Assignment_2/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -129,29 +129,29 @@ run/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/build
 .PHONY : run/fast
 
-TemperatureAnalysis.o: TemperatureAnalysis.cpp.o
-.PHONY : TemperatureAnalysis.o
+TemperatureAnalysisParallel.o: TemperatureAnalysisParallel.cpp.o
+.PHONY : TemperatureAnalysisParallel.o
 
 # target to build an object file
-TemperatureAnalysis.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/TemperatureAnalysis.cpp.o
-.PHONY : TemperatureAnalysis.cpp.o
+TemperatureAnalysisParallel.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/TemperatureAnalysisParallel.cpp.o
+.PHONY : TemperatureAnalysisParallel.cpp.o
 
-TemperatureAnalysis.i: TemperatureAnalysis.cpp.i
-.PHONY : TemperatureAnalysis.i
+TemperatureAnalysisParallel.i: TemperatureAnalysisParallel.cpp.i
+.PHONY : TemperatureAnalysisParallel.i
 
 # target to preprocess a source file
-TemperatureAnalysis.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/TemperatureAnalysis.cpp.i
-.PHONY : TemperatureAnalysis.cpp.i
+TemperatureAnalysisParallel.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/TemperatureAnalysisParallel.cpp.i
+.PHONY : TemperatureAnalysisParallel.cpp.i
 
-TemperatureAnalysis.s: TemperatureAnalysis.cpp.s
-.PHONY : TemperatureAnalysis.s
+TemperatureAnalysisParallel.s: TemperatureAnalysisParallel.cpp.s
+.PHONY : TemperatureAnalysisParallel.s
 
 # target to generate assembly for a file
-TemperatureAnalysis.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/TemperatureAnalysis.cpp.s
-.PHONY : TemperatureAnalysis.cpp.s
+TemperatureAnalysisParallel.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/TemperatureAnalysisParallel.cpp.s
+.PHONY : TemperatureAnalysisParallel.cpp.s
 
 main.o: main.cpp.o
 .PHONY : main.o
@@ -186,9 +186,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... run"
-	@echo "... TemperatureAnalysis.o"
-	@echo "... TemperatureAnalysis.i"
-	@echo "... TemperatureAnalysis.s"
+	@echo "... TemperatureAnalysisParallel.o"
+	@echo "... TemperatureAnalysisParallel.i"
+	@echo "... TemperatureAnalysisParallel.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
