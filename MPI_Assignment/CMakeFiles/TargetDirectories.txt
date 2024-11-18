@@ -1,0 +1,3 @@
+/home/asher/HPC/MPI_Assignment/CMakeFiles/run.dir
+/home/asher/HPC/MPI_Assignment/CMakeFiles/edit_cache.dir
+/home/asher/HPC/MPI_Assignment/CMakeFiles/rebuild_cache.dir
