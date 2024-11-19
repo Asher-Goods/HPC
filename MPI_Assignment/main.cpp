@@ -1,28 +1,33 @@
-#include <iostream>
-#include <cstdio>
-#include <sys/time.h>
 #include "TemperatureAnalysisParallel.h"
+#include <mpi.h>
+#include <iostream>
+#include <string>
 
-int main() {
-    struct timeval start, end;
+using namespace std;
 
-    std::string filename = "bigw12a.log";
-    std::string outputFile = "outputData.log";
+int main(int argc, char **argv) {
+    MPI_Init(&argc, &argv);
 
-    printf("Initialize File and Setup Pipeline\n");
-    gettimeofday(&start, NULL); // Start timer
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    TemperatureAnalysisParallel analysis(filename);
-    analysis.setHeatingMonths({12, 1, 2, 3});
-    analysis.setCoolingMonths({7, 8, 9});
+    // Ensure there are exactly 4 processes
+    if (size != 4) {
+        if (rank == 0) {
+            cerr << "This program requires exactly 4 MPI processes.\n";
+        }
+        MPI_Abort(MPI_COMM_WORLD, 1);
+    }
 
-    // Initialize pipeline and start all stages as threads
-    analysis.startPipeline(outputFile);
+    // Input and output file paths
+    const string inputFile = "bigw12a.txt";
+    const string outputFile = "bigw12a.log";
 
-    gettimeofday(&end, NULL); // Stop timer
-    int micro_start = start.tv_sec * 1000000 + start.tv_usec;
-    int micro_end = end.tv_sec * 1000000 + end.tv_usec;
-    printf("Total time for initializing and processing with pipeline: %d microseconds\n\n", micro_end - micro_start);
+    // Instantiate the pipeline class and start processing
+    TemperatureAnalysisParallel pipeline(inputFile);
+    pipeline.startPipeline(outputFile);
 
+    MPI_Finalize();
     return 0;
 }

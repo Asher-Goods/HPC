@@ -39,8 +39,6 @@ struct TemperatureData {
 enum TaskRole { READER = 0, PARSER = 1, DETECTOR = 2, WRITER = 3 };
 
 int startPipeline(const string &outputFile) {
-    MPI_Init(&argc, &argv);
-
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
