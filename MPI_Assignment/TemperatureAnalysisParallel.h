@@ -22,13 +22,14 @@ struct TemperatureData {
     int month, day, year, hour, minute, second;
     float temperature;
 
-    // Serialization helper for MPI
-    static constexpr int dataSize = 7; // Number of fields in the struct
+    static const int dataSize = 7; // Use const instead of constexpr for dataSize
+
     void toArray(double *array) const {
         array[0] = month; array[1] = day; array[2] = year;
         array[3] = hour; array[4] = minute; array[5] = second;
         array[6] = temperature;
     }
+    
     void fromArray(const double *array) {
         month = array[0]; day = array[1]; year = array[2];
         hour = array[3]; minute = array[4]; second = array[5];
