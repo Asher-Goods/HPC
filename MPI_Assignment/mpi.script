@@ -13,7 +13,45 @@ module load intel/2017.1.132 intel-mpi/2017.1.132  # Load required modules
 
 # Copy your source code to the scratch directory
 cp TemperatureAnalysis.cpp $SLURM_SCRATCH
-cp TemperatureAnalysis.h $SLURM_SCRATCH
+cp TemperatureAnalysis.h $SLURM_SCRATCH#!/bin/bash
+#SBATCH --job-name=temperature_analysis    # Job name
+#SBATCH --nodes=2                          # Number of nodes
+#SBATCH --ntasks-per-node=28               # Tasks per node
+#SBATCH --cluster=mpi                      # Use the MPI cluster
+#SBATCH --time=00:10:00                    # Walltime in hh:mm:ss
+#SBATCH --qos=normal                       # Quality of service
+#SBATCH --output=mpi_output_%j.log         # Output file with Job ID
+#SBATCH --account=ece1115_2024f            # Your account
+
+module purge                               # Purge all loaded modules
+module load intel/2017.1.132 intel-mpi/2017.1.132  # Load required modules
+
+# Define the scratch directory
+SCRATCH_DIR=$SLURM_SCRATCH
+SOURCE_FILES="TemperatureAnalysis.cpp TemperatureAnalysis.h main.cpp"
+EXECUTABLE="main"
+
+# Copy source files to the scratch directory
+for file in $SOURCE_FILES; do
+    cp $file $SCRATCH_DIR || { echo "Error copying $file"; exit 1; }
+done
+
+# Change to the scratch directory
+cd $SCRATCH_DIR
+
+# Compile the MPI program
+mpicxx main.cpp TemperatureAnalysis.cpp -std=c++11 -o $EXECUTABLE -v || { echo "Compilation failed"; exit 1; }
+
+# List files for debugging
+ls -l
+
+# Execute the MPI program
+mpirun -np $SLURM_NTASKS ./$EXECUTABLE || { echo "Execution failed"; exit 1; }
+
+# Cleanup (optional)
+echo "Job $SLURM_JOB_ID completed. Scratch directory:"
+ls -l
+
 cp main.cpp $SLURM_SCRATCH
 
 # Compile the MPI program
