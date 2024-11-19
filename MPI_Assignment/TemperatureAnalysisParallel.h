@@ -19,21 +19,35 @@
 using namespace std;
 
 struct TemperatureData {
+    static const int dataSize = 7; // Number of fields in TemperatureData
+
     int month, day, year, hour, minute, second;
-    float temperature;
+    double temperature;
 
-    static const int dataSize = 7; // Use const instead of constexpr for dataSize
+    TemperatureData() : month(0), day(0), year(0), hour(0), minute(0), second(0), temperature(0.0) {}
+    TemperatureData(int month, int day, int year, int hour, int minute, int second, double temperature)
+        : month(month), day(day), year(year), hour(hour), minute(minute), second(second), temperature(temperature) {}
 
-    void toArray(double *array) const {
-        array[0] = month; array[1] = day; array[2] = year;
-        array[3] = hour; array[4] = minute; array[5] = second;
-        array[6] = temperature;
+    // Converts the data to an array for MPI transfer
+    void toArray(double* arr) const {
+        arr[0] = month;
+        arr[1] = day;
+        arr[2] = year;
+        arr[3] = hour;
+        arr[4] = minute;
+        arr[5] = second;
+        arr[6] = temperature;
     }
-    
-    void fromArray(const double *array) {
-        month = array[0]; day = array[1]; year = array[2];
-        hour = array[3]; minute = array[4]; second = array[5];
-        temperature = array[6];
+
+    // Fills the data from an array
+    void fromArray(const double* arr) {
+        month = static_cast<int>(arr[0]);
+        day = static_cast<int>(arr[1]);
+        year = static_cast<int>(arr[2]);
+        hour = static_cast<int>(arr[3]);
+        minute = static_cast<int>(arr[4]);
+        second = static_cast<int>(arr[5]);
+        temperature = arr[6];
     }
 };
 
