@@ -13,31 +13,22 @@ void TemperatureAnalysisParallel::setCoolingMonths(const vector<int> &months) {
     coolingMonths = months;
 }
 
-double TemperatureAnalysisParallel::calculateMean(const unordered_map<int, vector<double>>& temperatures) {
-    double total = 0;
-    int count = 0;
-
-    for (const auto& hourEntry : temperatures) {
-        for (double temp : hourEntry.second) {
-            total += temp;
-            count++;
-        }
+double TemperatureAnalysisParallel::calculateMean(const vector<double>& temperatures) {
+    double sum = 0;
+    for (double temp : temperatures) {
+        sum += temp;
     }
-    return (count > 0) ? total / count : 0;
+    return sum / temperatures.size();
 }
 
-double TemperatureAnalysisParallel::calculateStdDev(const unordered_map<int, vector<double>>& temperatures, double mean) {
+double TemperatureAnalysisParallel::calculateStdDev(const vector<double>& temperatures, double mean) {
     double sumSquaredDiffs = 0;
-    int count = 0;
-
-    for (const auto& hourEntry : temperatures) {
-        for (double temp : hourEntry.second) {
-            sumSquaredDiffs += (temp - mean) * (temp - mean);
-            count++;
-        }
+    for (double temp : temperatures) {
+        sumSquaredDiffs += (temp - mean) * (temp - mean);
     }
-    return (count > 1) ? sqrt(sumSquaredDiffs / (count - 1)) : 0;
+    return sqrt(sumSquaredDiffs / temperatures.size());
 }
+
 
 TemperatureData TemperatureAnalysisParallel::parseLine(const string &line) {
     stringstream ss(line);

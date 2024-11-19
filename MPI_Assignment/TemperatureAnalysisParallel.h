@@ -165,8 +165,8 @@ private:
     // Helper functions
     TemperatureData parseLine(const string &line);
     bool isAnomaly(double currentTemp, double previousTemp);
-    double calculateMean(const std::unordered_map<int, std::vector<double>> &temperatures);
-    double calculateStdDev(const std::unordered_map<int, std::vector<double>> &temperatures, double mean);
+    double calculateMean(const vector<double>& temperatures);
+    double calculateStdDev(const vector<double>& temperatures, double mean);
     void evaluateMonthlyTemperatures(Month month, const std::unordered_map<Hour, std::vector<double>> &temperatures);
     bool isCoolingMonth(int month);
     bool isHeatingMonth(int month);
