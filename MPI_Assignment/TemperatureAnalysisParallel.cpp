@@ -17,27 +17,6 @@ void TemperatureAnalysisParallel::setCoolingMonths(const vector<int> &months)
     coolingMonths = months;
 }
 
-struct TemperatureData {
-    int month, day, year, hour, minute, second;
-    float temperature;
-
-    // Serialization helper for MPI
-    static constexpr int dataSize = 7; // Number of fields in the struct
-    void toArray(double *array) const {
-        array[0] = month; array[1] = day; array[2] = year;
-        array[3] = hour; array[4] = minute; array[5] = second;
-        array[6] = temperature;
-    }
-    void fromArray(const double *array) {
-        month = array[0]; day = array[1]; year = array[2];
-        hour = array[3]; minute = array[4]; second = array[5];
-        temperature = array[6];
-    }
-};
-
-// Constants for task roles
-enum TaskRole { READER = 0, PARSER = 1, DETECTOR = 2, WRITER = 3 };
-
 int startPipeline(const string &outputFile) {
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -115,7 +94,8 @@ void anomalyDetector() {
     double lastTemp = NAN;
 
     while (true) {
-        double buffer[TemperatureData::dataSize];
+        constexpr int dataSize = TemperatureData::dataSize;
+        double buffer[dataSize];
         MPI_Recv(buffer, TemperatureData::dataSize, MPI_DOUBLE, PARSER, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
         // Check for termination signal
@@ -161,7 +141,8 @@ void fileWriter(const string &outputFile) {
     }
 
     while (true) {
-        double buffer[TemperatureData::dataSize];
+        constexpr int dataSize = TemperatureData::dataSize;
+        double buffer[dataSize];
         MPI_Recv(buffer, TemperatureData::dataSize, MPI_DOUBLE, DETECTOR, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
         // Check for termination signal

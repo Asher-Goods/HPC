@@ -18,17 +18,26 @@
 
 using namespace std;
 
-struct TemperatureData
-{
+struct TemperatureData {
     int month, day, year, hour, minute, second;
-    double temperature;
-    bool isValid; // Indicates if the data is valid
+    float temperature;
 
-    TemperatureData(int m, int d, int y, int h, int mi, int s, double temp)
-        : month(m), day(d), year(y), hour(h), minute(mi), second(s), temperature(temp), isValid(true) {}
-
-    TemperatureData() : month(0), day(0), year(0), hour(0), minute(0), second(0), temperature(0), isValid(false) {} // Default constructor for sentinel
+    // Serialization helper for MPI
+    static constexpr int dataSize = 7; // Number of fields in the struct
+    void toArray(double *array) const {
+        array[0] = month; array[1] = day; array[2] = year;
+        array[3] = hour; array[4] = minute; array[5] = second;
+        array[6] = temperature;
+    }
+    void fromArray(const double *array) {
+        month = array[0]; day = array[1]; year = array[2];
+        hour = array[3]; minute = array[4]; second = array[5];
+        temperature = array[6];
+    }
 };
+
+// Constants for task roles
+enum TaskRole { READER = 0, PARSER = 1, DETECTOR = 2, WRITER = 3 };
 
 struct TemperatureDataOut
 {
@@ -141,8 +150,8 @@ private:
     // Helper functions
     TemperatureData parseLine(const string &line);
     bool isAnomaly(double currentTemp, double previousTemp);
-    double calculateMean(const std::unordered_map<Hour, std::vector<double>> &temperatures);
-    double calculateStdDev(const std::unordered_map<Hour, std::vector<double>> &temperatures, double mean);
+    double calculateMean(const std::unordered_map<int, std::vector<double>> &temperatures);
+    double calculateStdDev(const std::unordered_map<int, std::vector<double>> &temperatures, double mean);
     void evaluateMonthlyTemperatures(Month month, const std::unordered_map<Hour, std::vector<double>> &temperatures);
     bool isCoolingMonth(int month);
     bool isHeatingMonth(int month);
