@@ -12,8 +12,8 @@ module purge                               # Purge all loaded modules
 module load intel/2017.1.132 intel-mpi/2017.1.132  # Load required modules
 
 # Copy your source code to the scratch directory
-cp TemperatureAnalysis.cpp $SLURM_SCRATCH
-cp TemperatureAnalysis.h $SLURM_SCRATCH#!/bin/bash
+cp TemperatureAnalysisParallel.cpp $SLURM_SCRATCH
+cp TemperatureAnalysisParallel.h $SLURM_SCRATCH#!/bin/bash
 #SBATCH --job-name=temperature_analysis    # Job name
 #SBATCH --nodes=2                          # Number of nodes
 #SBATCH --ntasks-per-node=28               # Tasks per node
@@ -28,7 +28,7 @@ module load intel/2017.1.132 intel-mpi/2017.1.132  # Load required modules
 
 # Define the scratch directory
 SCRATCH_DIR=$SLURM_SCRATCH
-SOURCE_FILES="TemperatureAnalysis.cpp TemperatureAnalysis.h main.cpp"
+SOURCE_FILES="TemperatureAnalysisParallel.cpp TemperatureAnalysisParallel.h main.cpp"
 EXECUTABLE="main"
 
 # Copy source files to the scratch directory
@@ -40,7 +40,7 @@ done
 cd $SCRATCH_DIR
 
 # Compile the MPI program
-mpicxx main.cpp TemperatureAnalysis.cpp -std=c++11 -o $EXECUTABLE -v || { echo "Compilation failed"; exit 1; }
+mpicxx main.cpp TemperatureAnalysisParallel.cpp -std=c++11 -o $EXECUTABLE -v || { echo "Compilation failed"; exit 1; }
 
 # List files for debugging
 ls -l
@@ -55,7 +55,7 @@ ls -l
 cp main.cpp $SLURM_SCRATCH
 
 # Compile the MPI program
-mpicxx $SLURM_SCRATCH/main.cpp $SLURM_SCRATCH/TemperatureAnalysis.cpp -std=c++11 -o $SLURM_SCRATCH/main -v 
+mpicxx $SLURM_SCRATCH/main.cpp $SLURM_SCRATCH/TemperatureAnalysisParallel.cpp -std=c++11 -o $SLURM_SCRATCH/main -v 
 
 ls -l $SLURM_SCRATCH/
 
