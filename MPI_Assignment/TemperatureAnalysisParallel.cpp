@@ -110,7 +110,7 @@ void anomalyDetector() {
         TemperatureData data;
         data.fromArray(buffer);
 
-        // Check for anomaly
+        // Check for anomaly (skip if temperature change is too large)
         if (!isnan(lastTemp) && fabs(data.temperature - lastTemp) > 2.0) {
             continue; // Skip anomaly
         }
@@ -120,9 +120,9 @@ void anomalyDetector() {
         int hourKey = data.hour;
         hourlyTemps[hourKey].push_back(data.temperature);
 
-        // Calculate mean and stddev
-        double mean = calculateMean(hourlyTemps);
-        double stddev = calculateStdDev(hourlyTemps, mean);
+        // Calculate mean and standard deviation
+        double mean = calculateMean(hourlyTemps);  // Calculate mean of temperatures for the hour
+        double stddev = calculateStdDev(hourlyTemps, mean);  // Calculate stddev using the mean
 
         // Send temperature data to writer if it exceeds thresholds
         if (data.temperature > mean + stddev || data.temperature < mean - stddev) {
@@ -132,6 +132,7 @@ void anomalyDetector() {
         }
     }
 }
+
 
 void fileWriter(const string &outputFile) {
     ofstream outFile(outputFile);
@@ -183,39 +184,38 @@ TemperatureData TemperatureAnalysisParallel::parseLine(const string &line)
 }
 
 // Helper function to calculate mean temperature
-double TemperatureAnalysisParallel::calculateMean(const unordered_map<Hour, vector<double>> &temperatures)
-{
+// Calculate the mean for the temperatures
+double TemperatureAnalysisParallel::calculateMean(const std::unordered_map<int, std::vector<double>> &temperatures) {
     double total = 0;
     int count = 0;
 
-    for (const auto &hourEntry : temperatures)
-    {
-        for (double temp : hourEntry.second)
-        {
-            total += temp;
-            count++;
+    // Iterate over all hourly temperature data
+    for (const auto &hourEntry : temperatures) {
+        for (double temp : hourEntry.second) {
+            total += temp;  // Add temperature to the total
+            count++;         // Increment the count of data points
         }
     }
 
-    return (count > 0) ? (total / count) : 0;
+    // Return the mean, or 0 if no data is present
+    return (count > 0) ? total / count : 0;
 }
 
-// Helper function to calculate standard deviation
-double TemperatureAnalysisParallel::calculateStdDev(const unordered_map<Hour, vector<double>> &temperatures, double mean)
-{
+// Calculate the standard deviation for the temperatures
+double TemperatureAnalysisParallel::calculateStdDev(const std::unordered_map<int, std::vector<double>> &temperatures, double mean) {
     double sumSquaredDiffs = 0;
     int count = 0;
 
-    for (const auto &hourEntry : temperatures)
-    {
-        for (double temp : hourEntry.second)
-        {
-            sumSquaredDiffs += (temp - mean) * (temp - mean);
-            count++;
+    // Iterate over all hourly temperature data
+    for (const auto &hourEntry : temperatures) {
+        for (double temp : hourEntry.second) {
+            sumSquaredDiffs += (temp - mean) * (temp - mean);  // Add squared difference from mean
+            count++;                                            // Increment count
         }
     }
 
-    return (count > 1) ? sqrt(sumSquaredDiffs / (count - 1)) : 0; // Using sample std dev
+    // Return the standard deviation, using sample formula (n - 1 in denominator)
+    return (count > 1) ? sqrt(sumSquaredDiffs / (count - 1)) : 0;
 }
 
 // Helper function to determine if temperature is an anomaly
