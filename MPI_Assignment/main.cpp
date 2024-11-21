@@ -1,32 +1,31 @@
-#include "TemperatureAnalysisParallel.h"
+#include "TemperatureAnalysisMPI.h"
 #include <mpi.h>
-#include <iostream>
-#include <string>
 
-using namespace std;
-
-int main(int argc, char **argv) {
+int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
 
-    int rank, size;
+    TemperatureAnalysisMPI analysis;
+
+    int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    // Ensure there are exactly 4 processes
-    if (size != 4) {
-        if (rank == 0) {
-            cerr << "This program requires exactly 4 MPI processes.\n";
-        }
-        MPI_Abort(MPI_COMM_WORLD, 1);
+    string inputFile = "bigw12a.log";
+    string outputFile = "outputData.log";
+
+    analysis.setHeatingMonths({12, 1, 2, 3});
+    analysis.setCoolingMonths({7, 8, 9});
+
+    if (rank == FILEREADER) {
+        analysis.fileReader(inputFile);
+    } else if (rank == PARSER) {
+        analysis.parser();
+    } else if (rank == ANOMALYDETECTOR) {
+        analysis.anomalyDetector(); 
+    } else if (rank == EVALUATETEMPERATURES) {
+        analysis.evaluateMonthlyTemperatures();
+    } else if (rank == FILEWRITER) {
+        analysis.fileWriter(outputFile);
     }
-
-    // Input and output file paths
-    const string inputFile = "bigw12a.txt";
-    const string outputFile = "bigw12a.log";
-
-    // Instantiate the pipeline class and start processing
-    TemperatureAnalysisParallel pipeline(inputFile);
-    pipeline.startPipeline(outputFile);
 
     MPI_Finalize();
     return 0;
