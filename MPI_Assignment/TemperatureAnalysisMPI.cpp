@@ -85,6 +85,7 @@ void TemperatureAnalysisMPI::fileReader(const string &filename) {
     // Signal end of file
     int sentinel = -1;
     MPI_Send(&sentinel, 1, MPI_INT, PARSER, 0, MPI_COMM_WORLD);
+    printf("read terminate\n");
 }
 
 
@@ -109,8 +110,11 @@ void TemperatureAnalysisMPI::parser() {
         while (offset < totalSize) {
             // Find the end of the current line (null terminator)
             string line(buffer + offset);
-            parsedData.push_back(parseLine(line));
-
+            TemperatureData temp_line = parseLine(line);
+            if(temp_line.month != -1){
+                parsedData.push_back(parseLine(line));
+            }
+            
             // Move the offset to the next line
             offset += line.size() + 1; // +1 for the null terminator
         }
@@ -127,6 +131,7 @@ void TemperatureAnalysisMPI::parser() {
     // Signal end of parsing
     int sentinel = -1;
     MPI_Send(&sentinel, 1, MPI_INT, ANOMALYDETECTOR, 0, MPI_COMM_WORLD);
+    printf("parse terminate\n");
 }
 
 
@@ -148,9 +153,11 @@ void TemperatureAnalysisMPI::anomalyDetector()
         if (batchSize == -1) {
             // send remaining monthly data from sendbuffer
             int totalDataSize = sendBuffer.size();  // Update the size of the sendBuffer
-            MPI_Send(&totalDataSize, 1, MPI_INT, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD);
-            // Send the data in sendBuffer (ensure we are sending the right number of elements)
-            MPI_Send(sendBuffer.data(), totalDataSize * sizeof(TemperatureData), MPI_BYTE, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD);
+            if(totalDataSize > 0) {
+                MPI_Send(&totalDataSize, 1, MPI_INT, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD);
+                // Send the data in sendBuffer (ensure we are sending the right number of elements)
+                MPI_Send(sendBuffer.data(), totalDataSize * sizeof(TemperatureData), MPI_BYTE, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD);
+            }
             break; // End signal
         }
 
@@ -183,27 +190,21 @@ void TemperatureAnalysisMPI::anomalyDetector()
             // Check if current month is same as previous month
             // If it isn't, send data and set current month and previous value to equal current value, clear sendbuffer
             if (data.month != currentMonth) {
-                // Ensure that we are sending the correct size of sendBuffer
                 int totalDataSize = sendBuffer.size();  // Update the size of the sendBuffer
-                MPI_Send(&totalDataSize, 1, MPI_INT, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD);
-
-                // Send the data in sendBuffer (ensure we are sending the right number of elements)
-                MPI_Send(sendBuffer.data(), totalDataSize * sizeof(TemperatureData), MPI_BYTE, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD);
-
+                if (totalDataSize > 0) {
+                    MPI_Send(&totalDataSize, 1, MPI_INT, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD);
+                    MPI_Send(sendBuffer.data(), totalDataSize * sizeof(TemperatureData), MPI_BYTE, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD);
+                }
                 // Update current month and reset previousTemp
                 currentMonth = data.month;
                 previousTemp = data.temperature;  // Initialize for the new month
 
                 // Clear sendBuffer after sending
                 sendBuffer.clear();
-
-                // Exit loop until more data comes in
-                break;
             }
             else {
                 // Detect anomaly
-                if (isAnomaly(data.temperature, previousTemp))
-                {
+                if (isAnomaly(data.temperature, previousTemp)) {
                     continue; // Skip this entry as it's an anomaly
                 }
 
@@ -213,12 +214,14 @@ void TemperatureAnalysisMPI::anomalyDetector()
                 // Update previous temperature
                 previousTemp = data.temperature;
             }
+
         }
     }
 
     // Send sentinel value to indicate the end of processing
     int endSignal = -1;
     MPI_Send(&endSignal, 1, MPI_INT, EVALUATETEMPERATURES, 0, MPI_COMM_WORLD); // Send end signal to terminate the next stage
+    printf("anomaly terminate\n");
 }
 
 
@@ -235,9 +238,9 @@ void TemperatureAnalysisMPI::evaluateMonthlyTemperatures(void)
         int batchSize;
         MPI_Recv(&batchSize, 1, MPI_INT, ANOMALYDETECTOR, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        if (batchSize == -1) {
-            // End signal received, exit the loop
-            break;
+        if (batchSize <= 0) {
+            cerr << "Received invalid batchSize: " << batchSize << endl;
+            break; // Handle gracefully or exit
         }
 
         // Receive chunk of monthly temperature data (clean of anomalies)
@@ -247,37 +250,51 @@ void TemperatureAnalysisMPI::evaluateMonthlyTemperatures(void)
         // Calculate mean and standard deviation for the current month's data
         double mean = calculateMean(data);
         double stddev = calculateStdDev(data, mean);
-
+        printf("Month: %d\t Mean: %f\t STDV: %f\n", data[0].month, mean, stddev);
         // Process temperatures for heating/cooling issues
+
+        int hourProcessed = -1;
+        int currentDay = -1;
+
         for (const TemperatureData& entry : data)
         {
-            // Check if the current hour already has an issue detected
-            if (processedHours.find(entry.hour) != processedHours.end()) {
-                continue; // Skip this hour if it's already processed
+
+            if(isCoolingMonth(entry.month)) {
+                if ((entry.temperature > mean + stddev) && (hourProcessed != entry.hour) && (currentDay != entry.day) ) {
+                sendBuffer.push_back(entry);
+                hourProcessed = entry.hour;
+                currentDay = entry.day;
+            }
+            }
+            
+            else if(isHeatingMonth(entry.month)) {
+                if ((entry.temperature < mean - stddev) && (hourProcessed != entry.hour) && (currentDay != entry.day) ) {
+                sendBuffer.push_back(entry);
+                hourProcessed = entry.hour;
+                currentDay = entry.day;
+            }
             }
 
-            // Otherwise, check for a detected issue (heating or cooling issues)
-            if ((isHeatingMonth(entry.month) && entry.temperature > mean + stddev) ||
-                (isCoolingMonth(entry.month) && entry.temperature < mean - stddev))
-            {
-                // Push detected issue to the queue
-                sendBuffer.push_back(entry);  // Push detected issue to the queue
-            }
-
-            // Mark the current hour as processed
-            processedHours.insert(entry.hour);
         }
 
         // Send buffer via MPI to FileWriter
-        int totalDataSize = sendBuffer.size();  // Get the size of the sendBuffer
-        MPI_Send(&totalDataSize, 1, MPI_INT, FILEWRITER, 0, MPI_COMM_WORLD);  // Send the size to FileWriter
-        if (totalDataSize > 0) {
-            MPI_Send(sendBuffer.data(), totalDataSize * sizeof(TemperatureData), MPI_BYTE, FILEWRITER, 0, MPI_COMM_WORLD);  // Send data to FileWriter
+        if(!sendBuffer.empty()){
+            int totalDataSize = sendBuffer.size();  // Get the size of the sendBuffer
+            MPI_Send(&totalDataSize, 1, MPI_INT, FILEWRITER, 0, MPI_COMM_WORLD);  // Send the size to FileWriter
+            if (totalDataSize > 0) {
+                MPI_Send(sendBuffer.data(), totalDataSize * sizeof(TemperatureData), MPI_BYTE, FILEWRITER, 0, MPI_COMM_WORLD);  // Send data to FileWriter
+            }
         }
+        processedHours.clear();
 
         // Clear sendBuffer after sending
         sendBuffer.clear();
+        data.clear();
     }
+
+    int endSignal = -1;
+    MPI_Send(&endSignal, 1, MPI_INT, FILEWRITER, 0, MPI_COMM_WORLD); // Send end signal to terminate the next stage
+    printf("eval terminate\n");
 }
 
 
@@ -323,6 +340,7 @@ void TemperatureAnalysisMPI::fileWriter(const string &outputFile)
 
     // Close the output file
     outFile.close();
+    printf("write file terminate\n");
 }
 
 // Helper function to determine if temperature is an anomaly

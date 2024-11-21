@@ -1,0 +1,23 @@
+Month: 6	 Mean: 71.506145	 STDV: 3.891800
+Month: 7	 Mean: 72.382761	 STDV: 6.034578
+Month: 8	 Mean: 74.136930	 STDV: 3.687899
+Month: 9	 Mean: 71.048272	 STDV: 4.057635
+Month: 10	 Mean: 72.011236	 STDV: 2.288078
+Month: 11	 Mean: 70.476460	 STDV: 2.508423
+Month: 12	 Mean: 75.900335	 STDV: 2.674790
+Month: 1	 Mean: 73.638529	 STDV: 5.322254
+Month: 2	 Mean: 76.315559	 STDV: 1.002807
+Month: 3	 Mean: 75.964382	 STDV: 2.285741
+Month: 4	 Mean: 68.120147	 STDV: 4.743297
+Month: 5	 Mean: 72.208237	 STDV: 2.394578
+read terminate
+parse terminate
+anomaly terminate
+Month: 6	 Mean: 75.160195	 STDV: 1.883794
+eval terminate
+write file terminate
+Total time for rank 0: 74.050067 seconds
+Total time for rank 4: 74.006488 seconds
+Total time for rank 2: 74.024727 seconds
+Total time for rank 3: 74.030408 seconds
+Total time for rank 1: 74.035417 seconds

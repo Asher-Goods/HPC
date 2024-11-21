@@ -1,7 +1,11 @@
 #include "TemperatureAnalysisMPI.h"
 #include <mpi.h>
+#include <sys/time.h>
+#include <iostream>
 
 int main(int argc, char *argv[]) {
+    struct timeval start, end;
+    gettimeofday(&start, NULL); // Start timer
     MPI_Init(&argc, &argv);
 
     TemperatureAnalysisMPI analysis;
@@ -28,5 +32,12 @@ int main(int argc, char *argv[]) {
     }
 
     MPI_Finalize();
+
+    gettimeofday(&end, NULL); // End timer
+
+    // Convert microseconds to seconds
+    double elapsedTime = (end.tv_sec - start.tv_sec) + (end.tv_usec - start.tv_usec) / 1000000.0;
+    printf("Total time for rank %d: %.6f seconds\n", rank, elapsedTime);
+
     return 0;
 }
